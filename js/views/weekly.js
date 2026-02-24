@@ -1,0 +1,227 @@
+/**
+ * views/weekly.js — 7-day calendar grid with drag-and-drop rescheduling
+ */
+
+import { getState } from "../store.js";
+import { fromTs, updateTask } from "../db.js";
+import { openTaskForm } from "../task-form.js";
+import { toast, startOfWeek, addDays, isSameDay, formatTime } from "../ui-utils.js";
+
+const HOUR_START = 7;   // 7 AM
+const HOUR_END   = 22;  // 10 PM
+const SLOT_H     = 48;  // px per hour
+
+let weekOffset = 0; // 0 = current week
+
+export function renderWeekly() {
+  const el = document.getElementById("view-weekly");
+  const { tasks, settings } = getState();
+  const categories = settings?.categories ?? [];
+
+  const today    = new Date();
+  today.setHours(0,0,0,0);
+  const weekStart = addDays(startOfWeek(today), weekOffset * 7);
+
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // Build header labels
+  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  el.innerHTML = `
+    <div class="view-header">
+      <h2>Weekly View 📅</h2>
+      <div class="header-actions">
+        <button class="btn-ghost" id="wk-prev">← Prev</button>
+        <span class="wk-range">${formatDateShort(weekStart)} – ${formatDateShort(days[6])}</span>
+        <button class="btn-ghost" id="wk-next">Next →</button>
+        <button class="btn-ghost" id="wk-today">Today</button>
+        <button class="btn-primary" id="wk-new-task">+ Task</button>
+      </div>
+    </div>
+
+    <div class="week-grid-wrapper">
+      <!-- Time gutter -->
+      <div class="time-gutter">
+        ${buildTimeGutter()}
+      </div>
+
+      <!-- Day columns -->
+      <div class="week-columns">
+        ${days.map((day, i) => {
+          const isToday = isSameDay(day, today);
+          const dayTasks = tasks.filter(t => {
+            const s = fromTs(t.scheduledStart);
+            return s && isSameDay(s, day);
+          });
+          return `
+            <div class="week-col ${isToday ? "today-col" : ""}" data-date="${day.toISOString()}">
+              <div class="week-col-header ${isToday ? "today-header" : ""}">
+                <span class="dow-name">${dayNames[day.getDay()]}</span>
+                <span class="dow-date">${day.getDate()}</span>
+              </div>
+              <div class="week-col-body" data-date="${day.toISOString()}">
+                ${buildDaySlots()}
+                ${dayTasks.map(t => buildTaskBlock(t, categories, day)).join("")}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+
+    <!-- Unscheduled task list -->
+    <section class="unscheduled-section">
+      <h3 class="section-title">📋 Unscheduled tasks</h3>
+      <div class="unscheduled-list">
+        ${buildUnscheduledList(tasks, categories)}
+      </div>
+    </section>
+  `;
+
+  // Nav buttons
+  el.querySelector("#wk-prev").addEventListener("click", () => { weekOffset--; renderWeekly(); });
+  el.querySelector("#wk-next").addEventListener("click", () => { weekOffset++; renderWeekly(); });
+  el.querySelector("#wk-today").addEventListener("click", () => { weekOffset = 0; renderWeekly(); });
+  el.querySelector("#wk-new-task").addEventListener("click", () => openTaskForm());
+
+  // Task click → edit
+  el.querySelectorAll(".week-task-block").forEach(block => {
+    block.addEventListener("click", e => {
+      if (e.defaultPrevented) return;
+      const task = getState().tasks.find(t => t.id === block.dataset.taskId);
+      if (task) openTaskForm(task);
+    });
+  });
+
+  // Drag-and-drop
+  initDragDrop(el);
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function buildTimeGutter() {
+  let html = "";
+  for (let h = HOUR_START; h <= HOUR_END; h++) {
+    const label = h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h - 12} PM`;
+    html += `<div class="time-label" style="top:${(h - HOUR_START) * SLOT_H}px">${label}</div>`;
+  }
+  return html;
+}
+
+function buildDaySlots() {
+  let html = "";
+  const totalHours = HOUR_END - HOUR_START;
+  for (let h = 0; h < totalHours; h++) {
+    html += `<div class="hour-slot" style="top:${h * SLOT_H}px;height:${SLOT_H}px" data-hour="${HOUR_START + h}"></div>`;
+  }
+  return html;
+}
+
+function buildTaskBlock(task, categories, day) {
+  const start = fromTs(task.scheduledStart);
+  const end   = fromTs(task.scheduledEnd);
+  if (!start || !end) return "";
+
+  const cat   = categories.find(c => c.id === task.categoryId);
+  const color = cat?.color ?? "#9b5de5";
+
+  const dayStart  = new Date(day); dayStart.setHours(HOUR_START, 0, 0, 0);
+  const dayEnd    = new Date(day); dayEnd.setHours(HOUR_END, 0, 0, 0);
+
+  const clampedStart = start < dayStart ? dayStart : start;
+  const clampedEnd   = end   > dayEnd   ? dayEnd   : end;
+
+  const topPx    = ((clampedStart.getHours() + clampedStart.getMinutes()/60) - HOUR_START) * SLOT_H;
+  const heightPx = ((clampedEnd.getHours() + clampedEnd.getMinutes()/60) - (clampedStart.getHours() + clampedStart.getMinutes()/60)) * SLOT_H;
+
+  return `
+    <div class="week-task-block ${task.completed ? "task-completed" : ""}"
+         data-task-id="${task.id}"
+         draggable="true"
+         style="top:${topPx}px;height:${Math.max(heightPx,20)}px;background:${color}22;border-left:3px solid ${color}">
+      <div class="block-name">${esc(task.name)}</div>
+      <div class="block-time">${formatTime(clampedStart)}</div>
+    </div>
+  `;
+}
+
+function buildUnscheduledList(tasks, categories) {
+  const unscheduled = tasks.filter(t => !t.completed && !fromTs(t.scheduledStart));
+  if (!unscheduled.length) return `<p class="empty-state">All tasks are scheduled! 🎉</p>`;
+  return unscheduled.map(t => {
+    const cat = categories.find(c => c.id === t.categoryId);
+    const color = cat?.color ?? "#9b5de5";
+    return `
+      <div class="unscheduled-task" data-task-id="${t.id}" draggable="true"
+           style="border-left:3px solid ${color}">
+        <span>${esc(t.name)}</span>
+        <span class="task-hours">⏱ ${t.estimatedHours}h</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function initDragDrop(container) {
+  let dragTaskId  = null;
+  let dragOffsetY = 0;
+
+  container.addEventListener("dragstart", e => {
+    const block = e.target.closest("[data-task-id]");
+    if (!block) return;
+    dragTaskId  = block.dataset.taskId;
+    dragOffsetY = e.offsetY;
+    e.dataTransfer.effectAllowed = "move";
+    setTimeout(() => block.classList.add("dragging"), 0);
+  });
+
+  container.addEventListener("dragend", e => {
+    container.querySelectorAll(".dragging").forEach(el => el.classList.remove("dragging"));
+    container.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+  });
+
+  container.querySelectorAll(".week-col-body").forEach(col => {
+    col.addEventListener("dragover", e => {
+      e.preventDefault();
+      col.classList.add("drag-over");
+    });
+    col.addEventListener("dragleave", () => col.classList.remove("drag-over"));
+    col.addEventListener("drop", async e => {
+      e.preventDefault();
+      col.classList.remove("drag-over");
+      if (!dragTaskId) return;
+
+      const task = getState().tasks.find(t => t.id === dragTaskId);
+      if (!task) return;
+
+      const colRect    = col.getBoundingClientRect();
+      const dropY      = e.clientY - colRect.top - dragOffsetY;
+      const droppedHour = HOUR_START + dropY / SLOT_H;
+
+      const dateStr = col.dataset.date;
+      const newStart = new Date(dateStr);
+      const h = Math.floor(droppedHour);
+      const m = Math.round((droppedHour - h) * 60 / 15) * 15;
+      newStart.setHours(Math.min(h, HOUR_END - 1), m, 0, 0);
+      const newEnd = new Date(newStart.getTime() + (task.estimatedHours ?? 1) * 3600000);
+
+      try {
+        await updateTask(task.id, {
+          scheduledStart:    newStart,
+          scheduledEnd:      newEnd,
+          manuallyScheduled: true,
+        });
+        toast("Task rescheduled! 📅", "success");
+      } catch (err) {
+        toast("Could not reschedule: " + err.message, "error");
+      }
+    });
+  });
+}
+
+function formatDateShort(date) {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}

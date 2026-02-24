@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stitch & Schedule</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <nav id="sidebar">
+      <div class="sidebar-header">
+        <span class="logo">🧵</span>
+        <h1>Stitch &amp; Schedule</h1>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#" data-view="dashboard" class="active">
+          <span class="nav-icon">🏠</span> Dashboard
+        </a></li>
+        <li><a href="#" data-view="weekly">
+          <span class="nav-icon">📅</span> Weekly View
+        </a></li>
+        <li><a href="#" data-view="daily">
+          <span class="nav-icon">☀️</span> Daily Focus
+        </a></li>
+        <li><a href="#" data-view="projects">
+          <span class="nav-icon">📁</span> Projects
+        </a></li>
+        <li><a href="#" data-view="tasks">
+          <span class="nav-icon">✅</span> All Tasks
+        </a></li>
+        <li><a href="#" data-view="settings">
+          <span class="nav-icon">⚙️</span> Settings
+        </a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <button id="btn-connect-calendar" class="btn-secondary btn-sm" title="Connect Google Calendar">
+          📆 Connect Calendar
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main id="main-content">
+      <!-- Config banner (shown when Firebase is not configured) -->
+      <div id="config-banner" class="banner banner-warn" style="display:none;">
+        <strong>🔧 Firebase not configured.</strong>
+        Open <code>js/firebase-config.js</code> and add your project credentials.
+        <a href="#" data-view="settings">Go to Settings</a>
+      </div>
+
+      <!-- Views (only one visible at a time) -->
+      <div id="view-dashboard" class="view active"></div>
+      <div id="view-weekly"    class="view"></div>
+      <div id="view-daily"     class="view"></div>
+      <div id="view-projects"  class="view"></div>
+      <div id="view-tasks"     class="view"></div>
+      <div id="view-settings"  class="view"></div>
+    </main>
+  </div>
+
+  <!-- ===== MODALS ===== -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div id="modal-box" class="modal-box">
+      <button id="modal-close" class="modal-close" aria-label="Close">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast-container"></div>
+
+  <!-- ===== Firebase (CDN) ===== -->
+  <!-- SETUP: Replace these with your Firebase project's SDK snippet.
+       1. Go to https://console.firebase.google.com/
+       2. Create (or open) a project → Project Settings → Your apps → Web app
+       3. Copy the firebaseConfig object values into js/firebase-config.js
+       4. In Firestore Database, create a database in Native mode
+       5. Set security rules to allow read/write (single-user, local use):
+              rules_version = '2';
+              service cloud.firestore {
+                match /databases/{database}/documents {
+                  match /{document=**} { allow read, write: if true; }
+                }
+              }
+  -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
