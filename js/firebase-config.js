@@ -46,7 +46,7 @@ export const firebaseConfig = {
 };
 
 /** OAuth Client ID for Google Calendar (read-only) */
-export const GOOGLE_CALENDAR_CLIENT_ID = "YOUR_CALENDAR_OAUTH_CLIENT_ID.apps.googleusercontent.com";
+export const GOOGLE_CALENDAR_CLIENT_ID = "967095672764-l18ou1jc6efr6vc0n16tv57ucbitdhkk.apps.googleusercontent.com";
 
 /** Set to true once you have filled in the values above */
 export const FIREBASE_CONFIGURED = false;
