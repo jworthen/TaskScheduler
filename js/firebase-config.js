@@ -36,12 +36,13 @@
  */
 
 export const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_AUTH_DOMAIN",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID",
+  apiKey: "AIzaSyCxshdeSMZGd4aGAEkpcEtm3iRzOIaAZuw",
+  authDomain: "taskscheduler-7456c.firebaseapp.com",
+  projectId: "taskscheduler-7456c",
+  storageBucket: "taskscheduler-7456c.firebasestorage.app",
+  messagingSenderId: "990441124707",
+  appId: "1:990441124707:web:eb0a98a10a4f0bb04e5956",
+  measurementId: "G-HBLB73Y5WB"
 };
 
 /** OAuth Client ID for Google Calendar (read-only) */
