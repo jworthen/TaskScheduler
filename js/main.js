@@ -84,27 +84,55 @@ async function init() {
 
   initDb(app);
 
-  // Seed the settings doc with defaults on first run; ignore errors here
-  // because the real-time watcher below will surface them if Firestore is broken.
+  // ── localStorage mirror ─────────────────────────────────────────────────────
+  // Display cached data IMMEDIATELY on load (before Firestore responds).
+  // Every time Firestore fires, the cache is refreshed, so it's always current.
+  // This makes the app work even when the Firestore round-trip is slow or the
+  // page is refreshed before the server has fully confirmed a write.
+  function readCache(key) {
+    try { return JSON.parse(localStorage.getItem(key) ?? "null"); } catch { return null; }
+  }
+  function writeCache(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  }
+  function clearCacheKey(key) {
+    try { localStorage.removeItem(key); } catch {}
+  }
+
+  const cached = {
+    projects: readCache("ts_projects"),
+    tasks:    readCache("ts_tasks"),
+    settings: readCache("ts_settings"),
+  };
+  if (cached.projects) setState({ projects: cached.projects });
+  if (cached.tasks)    setState({ tasks:    cached.tasks    });
+  if (cached.settings) setState({ settings: cached.settings });
+
+  // Seed the settings doc with defaults on first run.
   loadSettings().catch(() => {});
 
-  // Real-time listeners — update store and re-render current view
+  // Real-time listeners — update store, mirror to localStorage, re-render
   const onFirestoreErr = err => {
     console.error("Firestore listener error:", err);
     toast(`Firestore error: ${err.message}. Check your security rules and network connection.`, "error");
   };
 
   watchSettings(settings => {
+    if (settings) writeCache("ts_settings", settings);
     setState({ settings });
     rerenderCurrent();
   }, onFirestoreErr);
 
   watchProjects(projects => {
+    console.log(`[Firestore] watchProjects: ${projects.length} project(s)`);
+    writeCache("ts_projects", projects);
     setState({ projects });
     rerenderCurrent();
   }, onFirestoreErr);
 
   watchTasks(tasks => {
+    console.log(`[Firestore] watchTasks: ${tasks.length} task(s)`);
+    writeCache("ts_tasks", tasks);
     setState({ tasks });
     rerenderCurrent();
   }, onFirestoreErr);
