@@ -6,7 +6,7 @@ import { getState } from "../store.js";
 import { fromTs, updateTask } from "../db.js";
 import { openTaskForm } from "../task-form.js";
 import { openProjectForm } from "../project-form.js";
-import { categoryChip, priorityBadge, toast, formatDate } from "../ui-utils.js";
+import { priorityBadge, toast, formatDate } from "../ui-utils.js";
 
 export function renderProjects() {
   const el = document.getElementById("view-projects");
@@ -21,6 +21,7 @@ export function renderProjects() {
       <h2>Projects 📁</h2>
       <div class="header-actions">
         <button class="btn-secondary" id="proj-new-project">+ New Project</button>
+        ${selectedId ? `<button class="btn-ghost" id="proj-edit-project">✏ Edit project</button>` : ""}
         <button class="btn-primary"   id="proj-new-task" ${!selectedId ? "disabled" : ""}>+ Task</button>
       </div>
     </div>
@@ -51,16 +52,10 @@ export function renderProjects() {
 
   el.querySelector("#proj-new-project").addEventListener("click", () => openProjectForm());
   if (selectedId) {
+    const selectedProject = projects.find(p => p.id === selectedId);
+    el.querySelector("#proj-edit-project")?.addEventListener("click", () => openProjectForm(selectedProject));
     el.querySelector("#proj-new-task").addEventListener("click", () => openTaskForm(null, selectedId));
   }
-
-  // Edit project on double-click of tab
-  el.querySelectorAll(".project-tab.active").forEach(tab => {
-    tab.addEventListener("dblclick", () => {
-      const proj = projects.find(p => p.id === tab.dataset.projectId);
-      if (proj) openProjectForm(proj);
-    });
-  });
 
   // Task cards
   el.querySelectorAll(".kanban-task-card").forEach(card => {
@@ -125,24 +120,15 @@ function buildKanban(projectId, projects, tasks) {
 }
 
 function kanbanCard(task) {
-  const { settings } = getState();
-  const categories = settings?.categories ?? [];
-  const cat  = categories.find(c => c.id === task.categoryId);
-  const due  = fromTs(task.dueDate);
-  const now  = new Date();
-
-  const coverImg = cat?.imageUrl
-    ? `<div class="card-cover" style="background-image:url('${esc(cat.imageUrl)}')"></div>`
-    : "";
+  const due = fromTs(task.dueDate);
+  const now = new Date();
 
   return `
     <div class="kanban-task-card ${task.completed ? "task-completed" : ""} ${task.blockerIds?.length ? "is-blocked" : ""}"
          data-task-id="${task.id}"
          draggable="true">
-      ${coverImg}
       <div class="card-name">${esc(task.name)}</div>
       <div class="card-meta">
-        ${cat ? categoryChip(cat) : ""}
         ${priorityBadge(task.priority)}
       </div>
       <div class="card-footer">

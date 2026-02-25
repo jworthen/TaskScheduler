@@ -13,18 +13,12 @@ import { openModal, closeModal, toast } from "./ui-utils.js";
  */
 export function openTaskForm(task = null, projectId = null) {
   const { projects, settings } = getState();
-  const categories = settings?.categories ?? [];
   const workSlots  = settings?.workSlots  ?? [];
   const isEdit = !!task;
 
   // Build project options
   const projectOptions = projects.map(p =>
     `<option value="${p.id}" ${(task?.projectId ?? projectId) === p.id ? "selected" : ""}>${p.name}</option>`
-  ).join("");
-
-  // Build category options
-  const catOptions = `<option value="">— none —</option>` + categories.map(c =>
-    `<option value="${c.id}" ${task?.categoryId === c.id ? "selected" : ""}>${c.name}</option>`
   ).join("");
 
   // Initial stage options (re-rendered via JS when project changes)
@@ -60,10 +54,6 @@ export function openTaskForm(task = null, projectId = null) {
           <option value="">— select stage —</option>
           ${stageOptions}
         </select>
-      </div>
-      <div class="form-row">
-        <label>Category</label>
-        <select id="tf-category">${catOptions}</select>
       </div>
       <div class="form-row">
         <label>Preferred time slot <span class="hint">(for scheduling)</span></label>
@@ -165,7 +155,6 @@ async function submitTaskForm(existingTask) {
   const name      = document.getElementById("tf-name").value.trim();
   const projectId = document.getElementById("tf-project").value;
   const stageId   = document.getElementById("tf-stage").value || null;
-  const catId     = document.getElementById("tf-category").value || null;
   const hours     = parseFloat(document.getElementById("tf-hours").value) || 1;
   const priority  = document.getElementById("tf-priority").value;
   const dueRaw    = document.getElementById("tf-due").value;
@@ -185,7 +174,6 @@ async function submitTaskForm(existingTask) {
     name,
     projectId,
     stageId,
-    categoryId:         catId,
     estimatedHours:     hours,
     priority,
     dueDate:            dueRaw ? new Date(dueRaw + "T23:59:59") : null,

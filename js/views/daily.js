@@ -5,14 +5,13 @@
 import { getState } from "../store.js";
 import { fromTs, completeTask } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { formatTime, formatDate, categoryChip, priorityBadge, toast, addDays } from "../ui-utils.js";
+import { formatTime, formatDate, priorityBadge, toast, addDays } from "../ui-utils.js";
 
 let dayOffset = 0;
 
 export function renderDaily() {
   const el = document.getElementById("view-daily");
-  const { tasks, settings } = getState();
-  const categories = settings?.categories ?? [];
+  const { tasks } = getState();
 
   const base  = new Date(); base.setHours(0,0,0,0);
   const today = addDays(base, dayOffset);
@@ -62,7 +61,7 @@ export function renderDaily() {
     <!-- Task timeline -->
     <div class="daily-timeline">
       ${dayTasks.length
-        ? dayTasks.map(t => dailyTaskCard(t, categories)).join("")
+        ? dayTasks.map(t => dailyTaskCard(t)).join("")
         : `<div class="empty-state">
              <div class="empty-icon">🌸</div>
              <p>No tasks scheduled for ${dateLabel}.</p>
@@ -108,16 +107,14 @@ export function renderDaily() {
   });
 }
 
-function dailyTaskCard(task, categories) {
-  const cat    = categories.find(c => c.id === task.categoryId);
+function dailyTaskCard(task) {
   const start  = fromTs(task.scheduledStart);
   const end    = fromTs(task.scheduledEnd);
-  const color  = cat?.color ?? "#9b5de5";
 
   return `
     <div class="daily-task-card ${task.completed ? "task-completed" : ""}"
          data-task-id="${task.id}"
-         style="border-left: 4px solid ${color}">
+         style="border-left: 4px solid var(--brand)">
       <div class="daily-card-time">
         <span>${start ? formatTime(start) : "—"}</span>
         ${end ? `<span class="time-end">${formatTime(end)}</span>` : ""}
@@ -130,7 +127,6 @@ function dailyTaskCard(task, categories) {
           </button>
         </div>
         <div class="daily-card-meta">
-          ${cat ? categoryChip(cat) : ""}
           ${priorityBadge(task.priority)}
           <span class="task-hours">⏱ ${task.estimatedHours}h</span>
           ${task.recurring ? `<span class="recurring-badge">🔄 Recurring</span>` : ""}

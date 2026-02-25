@@ -4,7 +4,7 @@
 
 import { getState, getBlockedTasks } from "../store.js";
 import { fromTs } from "../db.js";
-import { formatDate, categoryChip, priorityBadge } from "../ui-utils.js";
+import { formatDate, priorityBadge } from "../ui-utils.js";
 import { openTaskForm } from "../task-form.js";
 import { openProjectForm } from "../project-form.js";
 
@@ -14,8 +14,6 @@ export function renderDashboard() {
 
   const now        = new Date();
   const weekEnd    = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
-  const categories = settings?.categories ?? [];
-
   const dueSoon = tasks.filter(t => {
     if (t.completed) return false;
     const due = fromTs(t.dueDate);
@@ -72,21 +70,21 @@ export function renderDashboard() {
     <section class="dash-section">
       <h3 class="section-title danger-title">⚠️ Overdue</h3>
       <div class="task-list">
-        ${overdue.map(t => taskRow(t, categories)).join("")}
+        ${overdue.map(t => taskRow(t)).join("")}
       </div>
     </section>` : ""}
 
     <section class="dash-section">
       <h3 class="section-title">📅 Due this week</h3>
       ${dueSoon.length
-        ? `<div class="task-list">${dueSoon.map(t => taskRow(t, categories)).join("")}</div>`
+        ? `<div class="task-list">${dueSoon.map(t => taskRow(t)).join("")}</div>`
         : `<p class="empty-state">Nothing due in the next 7 days 🎉</p>`}
     </section>
 
     <section class="dash-section">
       <h3 class="section-title">☀️ Today's schedule</h3>
       ${todayTasks.length
-        ? `<div class="task-list">${todayTasks.map(t => taskRow(t, categories, true)).join("")}</div>`
+        ? `<div class="task-list">${todayTasks.map(t => taskRow(t, true)).join("")}</div>`
         : `<p class="empty-state">No tasks scheduled for today</p>`}
     </section>
 
@@ -94,7 +92,7 @@ export function renderDashboard() {
     <section class="dash-section">
       <h3 class="section-title">🚫 Blocked</h3>
       <div class="task-list">
-        ${blocked.map(t => taskRow(t, categories)).join("")}
+        ${blocked.map(t => taskRow(t)).join("")}
       </div>
     </section>` : ""}
 
@@ -127,8 +125,7 @@ export function renderDashboard() {
   });
 }
 
-function taskRow(task, categories, showTime = false) {
-  const cat  = categories.find(c => c.id === task.categoryId);
+function taskRow(task, showTime = false) {
   const due  = fromTs(task.dueDate);
   const sStart = fromTs(task.scheduledStart);
 
@@ -136,7 +133,6 @@ function taskRow(task, categories, showTime = false) {
     <div class="task-row" data-task-id="${task.id}">
       <div class="task-row-main">
         <span class="task-name">${esc(task.name)}</span>
-        ${cat ? categoryChip(cat) : ""}
         ${priorityBadge(task.priority)}
       </div>
       <div class="task-row-meta">
