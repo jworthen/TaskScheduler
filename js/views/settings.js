@@ -182,12 +182,20 @@ export function renderSettings() {
 }
 
 function catRow(cat) {
+  const img = cat.imageUrl ?? "";
   return `
     <div class="cat-row" data-cat-id="${cat.id}">
-      <input type="color" class="cat-color" value="${cat.color}" title="Category colour" />
-      <input type="text"  class="cat-name-input" value="${esc(cat.name)}" placeholder="Category name" maxlength="60" />
-      <button class="btn-ghost btn-sm cat-save"   title="Save">💾</button>
-      <button class="btn-ghost btn-sm cat-delete" title="Delete">🗑️</button>
+      <div class="cat-row-main">
+        <input type="color" class="cat-color" value="${cat.color}" title="Category colour" />
+        <input type="text"  class="cat-name-input" value="${esc(cat.name)}" placeholder="Category name" maxlength="60" />
+        <button class="btn-ghost btn-sm cat-img-toggle" title="Set cover image">🖼</button>
+        <button class="btn-ghost btn-sm cat-save"   title="Save">💾</button>
+        <button class="btn-ghost btn-sm cat-delete" title="Delete">🗑️</button>
+      </div>
+      <div class="cat-img-row ${img ? "" : "hidden"}">
+        ${img ? `<img class="cat-img-preview" src="${esc(img)}" alt="cover" />` : `<div class="cat-img-preview cat-img-placeholder"></div>`}
+        <input type="url" class="cat-img-input" placeholder="Paste image URL…" value="${esc(img)}" />
+      </div>
     </div>
   `;
 }
@@ -202,14 +210,44 @@ function bindCatRow(row) {
     await saveCategoriesFromDOM();
     toast("Category removed.", "info");
   });
+
+  // Toggle image URL row
+  row.querySelector(".cat-img-toggle").addEventListener("click", () => {
+    row.querySelector(".cat-img-row").classList.toggle("hidden");
+  });
+
+  // Live-update preview when URL changes
+  const imgInput = row.querySelector(".cat-img-input");
+  const imgArea  = row.querySelector(".cat-img-row");
+  imgInput.addEventListener("input", () => {
+    const url = imgInput.value.trim();
+    let preview = imgArea.querySelector(".cat-img-preview");
+    if (url) {
+      if (preview.tagName !== "IMG") {
+        const img = document.createElement("img");
+        img.className = "cat-img-preview";
+        img.alt = "cover";
+        imgArea.replaceChild(img, preview);
+        preview = img;
+      }
+      preview.src = url;
+    } else {
+      if (preview.tagName === "IMG") {
+        const placeholder = document.createElement("div");
+        placeholder.className = "cat-img-preview cat-img-placeholder";
+        imgArea.replaceChild(placeholder, preview);
+      }
+    }
+  });
 }
 
 async function saveCategoriesFromDOM() {
   const rows = document.querySelectorAll(".cat-row");
   const categories = Array.from(rows).map(row => ({
-    id:    row.dataset.catId,
-    name:  row.querySelector(".cat-name-input").value.trim(),
-    color: row.querySelector(".cat-color").value,
+    id:       row.dataset.catId,
+    name:     row.querySelector(".cat-name-input").value.trim(),
+    color:    row.querySelector(".cat-color").value,
+    imageUrl: row.querySelector(".cat-img-input").value.trim() || null,
   })).filter(c => c.name);
 
   const updated = { ...(getState().settings ?? {}), categories };
