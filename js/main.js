@@ -6,7 +6,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
 import { firebaseConfig, FIREBASE_CONFIGURED } from "./firebase-config.js";
-import { initDb, watchProjects, watchTasks, watchSettings } from "./db.js";
+import { initDb, watchProjects, watchTasks, watchSettings, loadSettings } from "./db.js";
 import { setState, getState, subscribe } from "./store.js";
 import { initModal, toast } from "./ui-utils.js";
 import { initCalendar } from "./calendar.js";
@@ -83,6 +83,10 @@ async function init() {
   }
 
   initDb(app);
+
+  // Seed the settings doc with defaults on first run; ignore errors here
+  // because the real-time watcher below will surface them if Firestore is broken.
+  loadSettings().catch(() => {});
 
   // Real-time listeners — update store and re-render current view
   const onFirestoreErr = err => {

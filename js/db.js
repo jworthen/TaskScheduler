@@ -10,6 +10,8 @@
 
 import {
   getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
   collection, doc,
   getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
   query, where, orderBy, onSnapshot,
@@ -18,7 +20,16 @@ import {
 
 let db;
 export function initDb(app) {
-  db = getFirestore(app);
+  // Use IndexedDB-backed persistence so data survives page refreshes.
+  // If Firestore was already initialized (e.g. hot-reload), fall back
+  // to the existing instance.
+  try {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache(),
+    });
+  } catch {
+    db = getFirestore(app);
+  }
   return db;
 }
 
