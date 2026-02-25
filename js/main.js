@@ -85,20 +85,25 @@ async function init() {
   initDb(app);
 
   // Real-time listeners — update store and re-render current view
+  const onFirestoreErr = err => {
+    console.error("Firestore listener error:", err);
+    toast(`Firestore error: ${err.message}. Check your security rules and network connection.`, "error");
+  };
+
   watchSettings(settings => {
     setState({ settings });
     rerenderCurrent();
-  });
+  }, onFirestoreErr);
 
   watchProjects(projects => {
     setState({ projects });
     rerenderCurrent();
-  });
+  }, onFirestoreErr);
 
   watchTasks(tasks => {
     setState({ tasks });
     rerenderCurrent();
-  });
+  }, onFirestoreErr);
 
   // Google Calendar (non-blocking)
   await initCalendar().catch(() => {});
