@@ -27,7 +27,9 @@ export function initDb(app) {
     db = initializeFirestore(app, {
       localCache: persistentLocalCache(),
     });
-  } catch {
+    console.log("[Firestore] Using IndexedDB persistent cache");
+  } catch (e) {
+    console.warn("[Firestore] IndexedDB cache unavailable, using in-memory:", e?.message ?? e);
     db = getFirestore(app);
   }
   return db;
@@ -141,6 +143,7 @@ export async function createProject(data) {
     updatedAt: serverTimestamp(),
   };
   const ref = await addDoc(col("projects"), payload);
+  console.log("[Firestore] createProject wrote id:", ref.id);
   return { id: ref.id, ...payload };
 }
 
@@ -226,6 +229,7 @@ export async function createTask(data) {
     updatedAt:          serverTimestamp(),
   };
   const ref = await addDoc(col("tasks"), payload);
+  console.log("[Firestore] createTask wrote id:", ref.id);
   return { id: ref.id, ...payload };
 }
 
