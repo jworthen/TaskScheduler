@@ -123,7 +123,6 @@ async function submitProjectForm(existing) {
 
   if (!stages.length) { toast("Add at least one stage", "error"); return; }
 
-  closeModal();
   try {
     if (existing) {
       await updateProject(existing.id, { name, stages });
@@ -132,6 +131,7 @@ async function submitProjectForm(existing) {
       await createProject({ name, stages });
       toast("Project created! 🌟", "success");
     }
+    closeModal();
   } catch (err) {
     toast("Error: " + err.message, "error");
   }

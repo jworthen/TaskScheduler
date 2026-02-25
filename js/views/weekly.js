@@ -16,7 +16,9 @@ let weekOffset = 0; // 0 = current week
 export function renderWeekly() {
   const el = document.getElementById("view-weekly");
   const { tasks, settings } = getState();
-  const categories = settings?.categories ?? [];
+  const categories  = settings?.categories  ?? [];
+  const workingHours = settings?.workingHours ?? null;
+  const workSlots    = settings?.workSlots    ?? [];
 
   const today    = new Date();
   today.setHours(0,0,0,0);
@@ -60,7 +62,7 @@ export function renderWeekly() {
                 <span class="dow-date">${day.getDate()}</span>
               </div>
               <div class="week-col-body" data-date="${day.toISOString()}">
-                ${buildDaySlots()}
+                ${buildDaySlots(day, workingHours, workSlots)}
                 ${dayTasks.map(t => buildTaskBlock(t, categories, day)).join("")}
               </div>
             </div>
@@ -110,12 +112,58 @@ function buildTimeGutter() {
   return html;
 }
 
-function buildDaySlots() {
-  let html = "";
+function buildDaySlots(day, workingHours, workSlots) {
   const totalHours = HOUR_END - HOUR_START;
+  let html = "";
+
+  // ── Non-working hour overlay ───────────────────────────────────────────────
+  if (workingHours !== null) {
+    const dow = day.getDay();
+    const wh  = workingHours[dow];
+    if (!wh) {
+      // Full day off — shade everything
+      html += `<div class="hour-block-nonworking" style="top:0;height:${totalHours * SLOT_H}px"></div>`;
+    } else {
+      const [sH, sM] = wh.start.split(":").map(Number);
+      const [eH, eM] = wh.end.split(":").map(Number);
+      const workStart = sH + sM / 60;
+      const workEnd   = eH + eM / 60;
+      if (workStart > HOUR_START) {
+        const h = (workStart - HOUR_START) * SLOT_H;
+        html += `<div class="hour-block-nonworking" style="top:0;height:${h}px"></div>`;
+      }
+      if (workEnd < HOUR_END) {
+        const top = (workEnd - HOUR_START) * SLOT_H;
+        const h   = (HOUR_END - workEnd) * SLOT_H;
+        html += `<div class="hour-block-nonworking" style="top:${top}px;height:${h}px"></div>`;
+      }
+    }
+  }
+
+  // ── Work slot bands ────────────────────────────────────────────────────────
+  const dow = day.getDay();
+  for (const slot of workSlots) {
+    if (!(slot.days ?? []).includes(dow)) continue;
+    const [sH, sM] = slot.startTime.split(":").map(Number);
+    const [eH, eM] = slot.endTime.split(":").map(Number);
+    const slotStart = Math.max(sH + sM / 60, HOUR_START);
+    const slotEnd   = Math.min(eH + eM / 60, HOUR_END);
+    if (slotEnd <= slotStart) continue;
+    const top = (slotStart - HOUR_START) * SLOT_H;
+    const h   = (slotEnd - slotStart) * SLOT_H;
+    html += `
+      <div class="work-slot-band"
+           style="top:${top}px;height:${h}px;background:${slot.color}18;border-left:3px solid ${slot.color}80"
+           title="${esc(slot.name)}">
+        <span class="work-slot-label" style="color:${slot.color}">${esc(slot.name)}</span>
+      </div>`;
+  }
+
+  // ── Hour drop-target slots ─────────────────────────────────────────────────
   for (let h = 0; h < totalHours; h++) {
     html += `<div class="hour-slot" style="top:${h * SLOT_H}px;height:${SLOT_H}px" data-hour="${HOUR_START + h}"></div>`;
   }
+
   return html;
 }
 

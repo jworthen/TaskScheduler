@@ -14,6 +14,7 @@ import { openModal, closeModal, toast } from "./ui-utils.js";
 export function openTaskForm(task = null, projectId = null) {
   const { projects, settings } = getState();
   const categories = settings?.categories ?? [];
+  const workSlots  = settings?.workSlots  ?? [];
   const isEdit = !!task;
 
   // Build project options
@@ -63,6 +64,15 @@ export function openTaskForm(task = null, projectId = null) {
       <div class="form-row">
         <label>Category</label>
         <select id="tf-category">${catOptions}</select>
+      </div>
+      <div class="form-row">
+        <label>Preferred time slot <span class="hint">(for scheduling)</span></label>
+        <select id="tf-work-slot">
+          <option value="">— any time —</option>
+          ${workSlots.map(s =>
+            `<option value="${s.id}" ${task?.workSlotId === s.id ? "selected" : ""}>${s.name} (${s.startTime}–${s.endTime})</option>`
+          ).join("")}
+        </select>
       </div>
       <div class="form-2col">
         <div class="form-row">
@@ -166,11 +176,11 @@ async function submitTaskForm(existingTask) {
 
   const blockerSelect = document.getElementById("tf-blockers");
   const blockerIds    = Array.from(blockerSelect.selectedOptions).map(o => o.value);
+  const workSlotId    = document.getElementById("tf-work-slot").value || null;
 
   if (!name) { toast("Task name is required", "error"); return; }
   if (!projectId) { toast("Please select a project", "error"); return; }
 
-  closeModal();
   const data = {
     name,
     projectId,
@@ -184,6 +194,7 @@ async function submitTaskForm(existingTask) {
     recurringFrequency: recurring ? freq      : null,
     recurringInterval:  recurring && freq === "custom" ? interval : null,
     notes,
+    workSlotId,
   };
 
   try {
@@ -194,6 +205,7 @@ async function submitTaskForm(existingTask) {
       await createTask(data);
       toast("Task created! 🎉", "success");
     }
+    closeModal();
   } catch (err) {
     console.error(err);
     toast("Error saving task: " + err.message, "error");

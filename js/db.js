@@ -51,6 +51,12 @@ export const DEFAULT_CATEGORIES = [
   { id: "shipping",  name: "Shipping & Orders",        color: "#57cc99" },
 ];
 
+export const DEFAULT_WORK_SLOTS = [
+  { id: "morning",   name: "Morning",   startTime: "09:00", endTime: "12:00", color: "#f0e557", days: [1,2,3,4,5] },
+  { id: "afternoon", name: "Afternoon", startTime: "13:00", endTime: "17:00", color: "#54c5ba", days: [1,2,3,4,5] },
+  { id: "evening",   name: "Evening",   startTime: "18:00", endTime: "21:00", color: "#a02cb4", days: [1,2,3,4,5,6,0] },
+];
+
 const DEFAULT_WORKING_HOURS = {
   // 0=Sun … 6=Sat; null means day off
   0: null,
@@ -72,7 +78,8 @@ export async function loadSettings() {
 
   const defaults = {
     workingHours: DEFAULT_WORKING_HOURS,
-    categories: DEFAULT_CATEGORIES,
+    categories:   DEFAULT_CATEGORIES,
+    workSlots:    DEFAULT_WORK_SLOTS,
     calendarConnected: false,
   };
   await setDoc(ref, defaults);
@@ -84,10 +91,10 @@ export async function saveSettings(data) {
 }
 
 /** Real-time listener for settings */
-export function watchSettings(cb) {
+export function watchSettings(cb, onErr) {
   return onSnapshot(docRef("settings", "app"), snap => {
     cb(snap.exists() ? snap.data() : null);
-  });
+  }, onErr ?? (err => console.error("watchSettings:", err)));
 }
 
 // ─── PROJECTS ────────────────────────────────────────────────────────────────
@@ -137,10 +144,10 @@ export async function deleteProject(id) {
   await deleteDoc(docRef("projects", id));
 }
 
-export function watchProjects(cb) {
+export function watchProjects(cb, onErr) {
   return onSnapshot(query(col("projects"), orderBy("createdAt")), snap => {
     cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  });
+  }, onErr ?? (err => console.error("watchProjects:", err)));
 }
 
 // ─── TASKS ───────────────────────────────────────────────────────────────────
@@ -198,6 +205,7 @@ export async function createTask(data) {
     recurringFrequency: data.recurringFrequency  ?? null,
     recurringInterval:  data.recurringInterval   ?? null,
     notes:              data.notes               ?? "",
+    workSlotId:         data.workSlotId          ?? null,
     completed:          false,
     completedAt:        null,
     scheduledStart:     null,
@@ -262,10 +270,10 @@ function advanceDueDate(date, frequency, intervalDays) {
   return d;
 }
 
-export function watchTasks(cb, filters = {}) {
+export function watchTasks(cb, onErr, filters = {}) {
   const constraints = [orderBy("createdAt")];
   if (filters.projectId) constraints.unshift(where("projectId", "==", filters.projectId));
   return onSnapshot(query(col("tasks"), ...constraints), snap => {
     cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  });
+  }, onErr ?? (err => console.error("watchTasks:", err)));
 }
