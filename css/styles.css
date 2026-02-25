@@ -5,6 +5,7 @@
   font-weight: normal;
   font-style: normal;
   font-display: swap;
+  size-adjust: 130%;
 }
 
 @font-face {
@@ -146,7 +147,7 @@ a:hover { text-decoration: underline; }
   gap: 12px;
   margin-bottom: 20px;
 }
-.view-header h2 { font-size: 1.85rem; }
+.view-header h2 { font-size: 2.2rem; }
 
 .header-actions {
   display: flex;
