@@ -816,6 +816,41 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 }
 .empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
 
+/* ─── Project delete confirmation panel ─────────────────── */
+.delete-confirm-panel {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--red-light);
+  border: 1.5px solid var(--red);
+  border-radius: var(--radius-sm);
+}
+.delete-confirm-msg {
+  font-size: .88rem;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.delete-confirm-panel input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid var(--red);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: .88rem;
+  outline: none;
+  margin-bottom: 10px;
+  background: var(--surface);
+  transition: box-shadow .15s;
+}
+.delete-confirm-panel input[type="text"]:focus {
+  box-shadow: 0 0 0 3px rgba(239,71,111,.18);
+}
+.delete-confirm-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 /* ─── Kanban column cover image ──────────────────────────── */
 .kanban-col-cover {
   width: 100%;

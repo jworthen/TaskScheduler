@@ -4,7 +4,7 @@
 
 import { getState } from "./store.js";
 import { createProject, updateProject, deleteProject } from "./db.js";
-import { openModal, closeModal, toast, confirmAction } from "./ui-utils.js";
+import { openModal, closeModal, toast } from "./ui-utils.js";
 
 export function openProjectForm(project = null) {
   const isEdit = !!project;
@@ -39,6 +39,19 @@ export function openProjectForm(project = null) {
         <button type="button" class="btn-ghost" id="pf-cancel">Cancel</button>
         <button type="submit" class="btn-primary">${isEdit ? "Save changes" : "Create project 🌟"}</button>
       </div>
+      ${isEdit ? `
+      <div id="pf-delete-confirm" class="delete-confirm-panel hidden">
+        <p class="delete-confirm-msg">
+          This will permanently delete <strong>${esc(project.name)}</strong> and all its tasks.
+          Type the project name to confirm:
+        </p>
+        <input type="text" id="pf-delete-name" placeholder="${esc(project.name)}" autocomplete="off" spellcheck="false" />
+        <div class="delete-confirm-actions">
+          <button type="button" class="btn-ghost btn-sm" id="pf-delete-back">← Cancel</button>
+          <button type="button" class="btn-danger" id="pf-delete-confirm-btn" disabled>Delete forever</button>
+        </div>
+      </div>
+      ` : ""}
     </form>
   `;
 
@@ -53,8 +66,30 @@ export function openProjectForm(project = null) {
   });
 
   if (isEdit) {
-    document.getElementById("pf-delete").addEventListener("click", async () => {
-      if (!confirmAction(`Delete project "${project.name}" and all its tasks? This cannot be undone.`)) return;
+    const confirmPanel  = document.getElementById("pf-delete-confirm");
+    const nameInput     = document.getElementById("pf-delete-name");
+    const confirmBtn    = document.getElementById("pf-delete-confirm-btn");
+
+    // "Delete project" → reveal the type-to-confirm panel
+    document.getElementById("pf-delete").addEventListener("click", () => {
+      confirmPanel.classList.remove("hidden");
+      nameInput.focus();
+    });
+
+    // Enable confirm button only when typed name matches exactly
+    nameInput.addEventListener("input", () => {
+      confirmBtn.disabled = nameInput.value !== project.name;
+    });
+
+    // "← Cancel" within the panel hides it again
+    document.getElementById("pf-delete-back").addEventListener("click", () => {
+      confirmPanel.classList.add("hidden");
+      nameInput.value = "";
+      confirmBtn.disabled = true;
+    });
+
+    // Confirmed delete
+    confirmBtn.addEventListener("click", async () => {
       try {
         await deleteProject(project.id);
         toast("Project deleted.", "info");
