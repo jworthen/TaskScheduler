@@ -4,6 +4,23 @@
    Brand palette: purple · hot pink · navy · teal · chartreuse · orange
    ============================================================ */
 
+/* ─── Fonts ──────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Halmera';
+  src: url('../fonts/Halmera-jEA3O.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Proxima Soft';
+  src: url('../fonts/proxima-soft-7.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ─── Tokens ─────────────────────────────────────────────── */
 :root {
   /* purple */
