@@ -1,39 +1,48 @@
 /* ============================================================
    Stitch & Schedule — Styles
-   Palette: soft lavender + warm peach + sage green accents
+   Brand fonts : Halmera (headers), Proxima Soft (body)
+   Brand palette: purple · hot pink · navy · teal · chartreuse · orange
    ============================================================ */
 
 /* ─── Tokens ─────────────────────────────────────────────── */
 :root {
-  --brand:        #9b5de5;
-  --brand-light:  #e8d9ff;
-  --brand-dark:   #6b2fc9;
-  --accent:       #f4a261;
-  --accent-light: #fff0e4;
-  --green:        #57cc99;
-  --green-light:  #e0f7ee;
-  --red:          #ef476f;
-  --red-light:    #fde8ed;
-  --yellow:       #ffd166;
-  --yellow-light: #fff8e0;
-  --blue:         #00b4d8;
-  --blue-light:   #e0f7ff;
+  /* purple */
+  --brand:        #a02cb4;
+  --brand-light:  #f3d5f8;
+  --brand-dark:   #7b1f8b;
+  /* orange */
+  --accent:       #f67e35;
+  --accent-light: #fde9d6;
+  /* chartreuse */
+  --green:        #b7d041;
+  --green-light:  #eef5c0;
+  /* hot pink — used for danger / error states */
+  --red:          #ec008c;
+  --red-light:    #fce0f0;
+  /* yellow */
+  --yellow:       #f0e557;
+  --yellow-light: #fafac0;
+  /* teal */
+  --blue:         #54c5ba;
+  --blue-light:   #d0f0ee;
 
-  --bg:           #faf8ff;
+  --bg:           #fdf8ff;
   --surface:      #ffffff;
-  --surface-2:    #f3f0fa;
-  --border:       #e4dff2;
-  --text:         #2d2040;
-  --text-muted:   #7c6b99;
-  --sidebar-bg:   #2d2040;
-  --sidebar-text: #e8d9ff;
+  --surface-2:    #f8f3fc;
+  --border:       #e2d4e8;
+  --text:         #1e1030;
+  --text-muted:   #9e5099;
+  /* navy/indigo sidebar, soft-pink sidebar text */
+  --sidebar-bg:   #3c4098;
+  --sidebar-text: #efaacc;
 
   --radius:       12px;
   --radius-sm:    8px;
-  --shadow:       0 2px 12px rgba(45,32,64,.08);
-  --shadow-md:    0 4px 24px rgba(45,32,64,.12);
-  --font:         'Nunito', sans-serif;
-  --font-body:    'Nunito Sans', sans-serif;
+  --shadow:       0 2px 12px rgba(60,64,152,.08);
+  --shadow-md:    0 4px 24px rgba(60,64,152,.14);
+  /* Halmera + Proxima Soft (load via Adobe Fonts); Nunito/Nunito Sans are fallbacks */
+  --font:         'Halmera', 'Nunito', sans-serif;
+  --font-body:    'Proxima Soft', 'Nunito Sans', sans-serif;
 }
 
 /* ─── Reset & Base ───────────────────────────────────────── */
