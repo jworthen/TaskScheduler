@@ -197,6 +197,7 @@ async function submitTaskForm(existingTask) {
     workSlotId,
   };
 
+  closeModal();
   try {
     if (existingTask) {
       await updateTask(existingTask.id, data);
@@ -205,7 +206,6 @@ async function submitTaskForm(existingTask) {
       await createTask(data);
       toast("Task created! 🎉", "success");
     }
-    closeModal();
   } catch (err) {
     console.error(err);
     toast("Error saving task: " + err.message, "error");
