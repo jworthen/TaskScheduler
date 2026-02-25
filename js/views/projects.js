@@ -86,8 +86,12 @@ function buildKanban(projectId, projects, tasks) {
     <div class="kanban-columns">
       ${stages.map(stage => {
         const stageTasks = projTasks.filter(t => t.stageId === stage.id);
+        const colCover = stage.imageUrl
+          ? `<div class="kanban-col-cover" style="background-image:url('${esc(stage.imageUrl)}')"></div>`
+          : "";
         return `
           <div class="kanban-col" data-stage-id="${stage.id}">
+            ${colCover}
             <div class="kanban-col-header">
               <span class="col-name">${esc(stage.name)}</span>
               <span class="col-count">${stageTasks.length}</span>
@@ -127,10 +131,15 @@ function kanbanCard(task) {
   const due  = fromTs(task.dueDate);
   const now  = new Date();
 
+  const coverImg = cat?.imageUrl
+    ? `<div class="card-cover" style="background-image:url('${esc(cat.imageUrl)}')"></div>`
+    : "";
+
   return `
     <div class="kanban-task-card ${task.completed ? "task-completed" : ""} ${task.blockerIds?.length ? "is-blocked" : ""}"
          data-task-id="${task.id}"
          draggable="true">
+      ${coverImg}
       <div class="card-name">${esc(task.name)}</div>
       <div class="card-meta">
         ${cat ? categoryChip(cat) : ""}

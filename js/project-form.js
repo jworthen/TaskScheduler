@@ -18,7 +18,7 @@ export function openProjectForm(project = null) {
         { id: crypto.randomUUID(), name: "Launch",      order: 4 },
       ];
 
-  const stageRows = stages.map((s, i) => stageRow(s.id, s.name, i)).join("");
+  const stageRows = stages.map((s, i) => stageRow(s.id, s.name, i, s.imageUrl ?? "")).join("");
 
   const html = `
     <form id="proj-form" autocomplete="off">
@@ -49,7 +49,7 @@ export function openProjectForm(project = null) {
   document.getElementById("pf-add-stage").addEventListener("click", () => {
     const list  = document.getElementById("pf-stages");
     const count = list.querySelectorAll(".stage-row").length;
-    list.insertAdjacentHTML("beforeend", stageRow(crypto.randomUUID(), "", count));
+    list.insertAdjacentHTML("beforeend", stageRow(crypto.randomUUID(), "", count, ""));
   });
 
   if (isEdit) {
@@ -80,9 +80,10 @@ async function submitProjectForm(existing) {
 
   const stageEls = document.querySelectorAll("#pf-stages .stage-row");
   const stages = Array.from(stageEls).map((el, i) => ({
-    id:    el.dataset.stageId,
-    name:  el.querySelector(".stage-name-input").value.trim(),
-    order: i,
+    id:       el.dataset.stageId,
+    name:     el.querySelector(".stage-name-input").value.trim(),
+    imageUrl: el.querySelector(".stage-img-input").value.trim() || null,
+    order:    i,
   })).filter(s => s.name);
 
   if (!stages.length) { toast("Add at least one stage", "error"); return; }
@@ -101,13 +102,18 @@ async function submitProjectForm(existing) {
   }
 }
 
-function stageRow(id, name, order) {
+function stageRow(id, name, order, imageUrl = "") {
   return `
     <div class="stage-row" data-stage-id="${id}" draggable="true">
       <span class="drag-handle">⠿</span>
       <input type="text" class="stage-name-input" value="${esc(name)}"
              placeholder="Stage name" maxlength="60" />
+      <button type="button" class="btn-icon stage-img-btn" title="Set column cover image">🖼</button>
       <button type="button" class="btn-icon stage-remove" title="Remove stage">✕</button>
+      <div class="stage-img-row hidden">
+        ${imageUrl ? `<img class="stage-img-preview" src="${esc(imageUrl)}" alt="cover" />` : `<div class="stage-img-preview stage-img-placeholder"></div>`}
+        <input type="url" class="stage-img-input" placeholder="Paste column cover image URL…" value="${esc(imageUrl)}" />
+      </div>
     </div>
   `;
 }
@@ -119,6 +125,33 @@ function enableStageDrag() {
   list.addEventListener("click", e => {
     if (e.target.classList.contains("stage-remove")) {
       e.target.closest(".stage-row").remove();
+    }
+    if (e.target.classList.contains("stage-img-btn")) {
+      e.target.closest(".stage-row").querySelector(".stage-img-row").classList.toggle("hidden");
+    }
+  });
+
+  list.addEventListener("input", e => {
+    if (!e.target.classList.contains("stage-img-input")) return;
+    const row    = e.target.closest(".stage-row");
+    const imgRow = row.querySelector(".stage-img-row");
+    const url    = e.target.value.trim();
+    let preview  = imgRow.querySelector(".stage-img-preview");
+    if (url) {
+      if (preview.tagName !== "IMG") {
+        const img = document.createElement("img");
+        img.className = "stage-img-preview";
+        img.alt = "cover";
+        imgRow.replaceChild(img, preview);
+        preview = img;
+      }
+      preview.src = url;
+    } else {
+      if (preview.tagName === "IMG") {
+        const placeholder = document.createElement("div");
+        placeholder.className = "stage-img-preview stage-img-placeholder";
+        imgRow.replaceChild(placeholder, preview);
+      }
     }
   });
 

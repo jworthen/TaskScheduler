@@ -71,8 +71,10 @@ export function renderWeekly() {
 
     <!-- Unscheduled task list -->
     <section class="unscheduled-section">
-      <h3 class="section-title">📋 Unscheduled tasks</h3>
-      <div class="unscheduled-list">
+      <h3 class="section-title">📋 Unscheduled tasks
+        <span class="unschedule-hint">— drag scheduled tasks here to remove from calendar</span>
+      </h3>
+      <div class="unscheduled-list" id="unscheduled-drop-zone">
         ${buildUnscheduledList(tasks, categories)}
       </div>
     </section>
@@ -162,23 +164,35 @@ function buildUnscheduledList(tasks, categories) {
 }
 
 function initDragDrop(container) {
-  let dragTaskId  = null;
-  let dragOffsetY = 0;
+  let dragTaskId       = null;
+  let dragOffsetY      = 0;
+  let dragIsScheduled  = false; // true when dragging from the calendar grid
 
   container.addEventListener("dragstart", e => {
     const block = e.target.closest("[data-task-id]");
     if (!block) return;
-    dragTaskId  = block.dataset.taskId;
-    dragOffsetY = e.offsetY;
+    dragTaskId      = block.dataset.taskId;
+    dragOffsetY     = e.offsetY;
+    dragIsScheduled = block.classList.contains("week-task-block");
     e.dataTransfer.effectAllowed = "move";
     setTimeout(() => block.classList.add("dragging"), 0);
+
+    // Show unschedule drop zone hint when dragging a scheduled block
+    if (dragIsScheduled) {
+      const zone = container.querySelector("#unscheduled-drop-zone");
+      zone?.classList.add("unschedule-zone-active");
+    }
   });
 
-  container.addEventListener("dragend", e => {
+  container.addEventListener("dragend", () => {
     container.querySelectorAll(".dragging").forEach(el => el.classList.remove("dragging"));
     container.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+    container.querySelector("#unscheduled-drop-zone")?.classList.remove("unschedule-zone-active", "unschedule-zone-hover");
+    dragTaskId      = null;
+    dragIsScheduled = false;
   });
 
+  // ── Calendar column drop (reschedule) ──────────────────────────────────────
   container.querySelectorAll(".week-col-body").forEach(col => {
     col.addEventListener("dragover", e => {
       e.preventDefault();
@@ -193,11 +207,11 @@ function initDragDrop(container) {
       const task = getState().tasks.find(t => t.id === dragTaskId);
       if (!task) return;
 
-      const colRect    = col.getBoundingClientRect();
-      const dropY      = e.clientY - colRect.top - dragOffsetY;
+      const colRect     = col.getBoundingClientRect();
+      const dropY       = e.clientY - colRect.top - dragOffsetY;
       const droppedHour = HOUR_START + dropY / SLOT_H;
 
-      const dateStr = col.dataset.date;
+      const dateStr  = col.dataset.date;
       const newStart = new Date(dateStr);
       const h = Math.floor(droppedHour);
       const m = Math.round((droppedHour - h) * 60 / 15) * 15;
@@ -216,6 +230,35 @@ function initDragDrop(container) {
       }
     });
   });
+
+  // ── Unschedule drop zone ───────────────────────────────────────────────────
+  const dropZone = container.querySelector("#unscheduled-drop-zone");
+  if (dropZone) {
+    dropZone.addEventListener("dragover", e => {
+      if (!dragIsScheduled) return;
+      e.preventDefault();
+      dropZone.classList.add("unschedule-zone-hover");
+    });
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("unschedule-zone-hover");
+    });
+    dropZone.addEventListener("drop", async e => {
+      e.preventDefault();
+      dropZone.classList.remove("unschedule-zone-hover", "unschedule-zone-active");
+      if (!dragTaskId || !dragIsScheduled) return;
+
+      try {
+        await updateTask(dragTaskId, {
+          scheduledStart:    null,
+          scheduledEnd:      null,
+          manuallyScheduled: false,
+        });
+        toast("Task removed from calendar.", "info");
+      } catch (err) {
+        toast("Could not unschedule: " + err.message, "error");
+      }
+    });
+  }
 }
 
 function formatDateShort(date) {
