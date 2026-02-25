@@ -170,6 +170,7 @@ async function submitTaskForm(existingTask) {
   if (!name) { toast("Task name is required", "error"); return; }
   if (!projectId) { toast("Please select a project", "error"); return; }
 
+  closeModal();
   const data = {
     name,
     projectId,
@@ -193,7 +194,6 @@ async function submitTaskForm(existingTask) {
       await createTask(data);
       toast("Task created! 🎉", "success");
     }
-    closeModal();
   } catch (err) {
     console.error(err);
     toast("Error saving task: " + err.message, "error");
