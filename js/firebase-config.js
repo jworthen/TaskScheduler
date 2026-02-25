@@ -49,4 +49,4 @@ export const firebaseConfig = {
 export const GOOGLE_CALENDAR_CLIENT_ID = "967095672764-l18ou1jc6efr6vc0n16tv57ucbitdhkk.apps.googleusercontent.com";
 
 /** Set to true once you have filled in the values above */
-export const FIREBASE_CONFIGURED = false;
+export const FIREBASE_CONFIGURED = true;
