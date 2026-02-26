@@ -147,14 +147,16 @@ export async function getLists(boardId) {
 
 // ─── Cards (Tasks) ────────────────────────────────────────────────────────────
 
-/** Fetch all open (non-archived) cards for a board, including custom field values. */
+/** Fetch open cards that have a due date and are not yet complete. */
 export async function getCards(boardId) {
   const cards = await get(`/boards/${boardId}/cards`, {
     filter: "open",
     fields: "id,name,desc,due,dueComplete,idList,labels,shortUrl",
     customFieldItems: "true",
   });
-  return cards.map(c => cardToTask(c, boardId));
+  return cards
+    .filter(c => c.due && !c.dueComplete)
+    .map(c => cardToTask(c, boardId));
 }
 
 // ─── Scheduling metadata ──────────────────────────────────────────────────────
