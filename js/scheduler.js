@@ -96,8 +96,9 @@ export async function runScheduler() {
 
     const due        = fromTs(task.dueDate);
     const neededMins = (task.estimatedHours ?? 1) * 60;
-    const rangeEnd   = due   < horizon ? due   : horizon;
-    const rangeStart = now   < rangeEnd ? now   : rangeEnd;
+    const earliest   = task.startDate && task.startDate > now ? task.startDate : now;
+    const rangeEnd   = due      < horizon ? due      : horizon;
+    const rangeStart = earliest < rangeEnd ? earliest : rangeEnd;
 
     const slots = buildAvailableSlots(rangeStart, rangeEnd, workingHours, [
       ...busyBlocks,

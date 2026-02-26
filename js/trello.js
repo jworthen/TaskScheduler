@@ -151,7 +151,7 @@ export async function getLists(boardId) {
 export async function getCards(boardId) {
   const cards = await get(`/boards/${boardId}/cards`, {
     filter: "open",
-    fields: "id,name,desc,due,dueComplete,idList,labels,shortUrl",
+    fields: "id,name,desc,due,dueComplete,start,idList,labels,shortUrl",
     customFieldItems: "true",
   });
   return cards
@@ -211,7 +211,8 @@ export function cardToTask(card, boardId) {
     stageId:           card.idList,
     priority:          meta.priority          ?? labelsToPriority(card.labels),
     estimatedHours:    effortFromTrello ?? meta.estimatedHours ?? 1,
-    dueDate:           card.due               ? new Date(card.due) : null,
+    dueDate:           card.due               ? new Date(card.due)   : null,
+    startDate:         card.start             ? new Date(card.start) : null,
     completed:         card.dueComplete        ?? false,
     completedAt:       null,
     scheduledStart:    meta.scheduledStart    ? new Date(meta.scheduledStart) : null,
