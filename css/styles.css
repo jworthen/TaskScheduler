@@ -473,94 +473,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   margin-top: 12px;
 }
 
-/* ─── Project kanban ─────────────────────────────────────── */
-.project-tabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-.project-tab {
-  background: var(--surface-2);
-  border: 1.5px solid var(--border);
-  border-radius: 99px;
-  padding: 7px 16px;
-  font-family: var(--font);
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all .15s;
-}
-.project-tab:hover { border-color: var(--brand); color: var(--brand); }
-.project-tab.active { background: var(--brand); border-color: var(--brand); color: #fff; }
-.project-tab.active:hover { background: var(--brand-dark); }
-
-.kanban-board { overflow-x: auto; padding-bottom: 12px; }
-.kanban-columns { display: flex; gap: 14px; min-width: max-content; align-items: flex-start; }
-
-.kanban-col {
-  width: 240px;
-  flex-shrink: 0;
-  background: var(--surface-2);
-  border-radius: var(--radius);
-  border: 1.5px solid var(--border);
-  overflow: hidden;
-}
-
-.kanban-col-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: var(--surface);
-  border-bottom: 1.5px solid var(--border);
-  font-family: var(--font);
-}
-.col-name  { font-weight: 700; font-size: 1rem; }
-.col-count { font-size: .75rem; color: var(--text-muted); background: var(--surface-2); padding: 1px 7px; border-radius: 99px; }
-
-.kanban-col-body {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 80px;
-}
-.kanban-col-body.drag-over { background: var(--brand-light); }
-
-.kanban-task-card {
-  background: var(--surface);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  cursor: pointer;
-  box-shadow: var(--shadow);
-  transition: box-shadow .15s;
-}
-.kanban-task-card:hover { box-shadow: var(--shadow-md); }
-.kanban-task-card.dragging { opacity: .4; }
-.kanban-task-card.is-blocked { border-left: 3px solid var(--red); }
-.kanban-task-card.task-completed { opacity: .5; }
-
-.card-name   { font-weight: 700; font-size: .85rem; margin-bottom: 6px; }
-.card-meta   { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
-.card-footer { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .74rem; color: var(--text-muted); }
-.card-due    { color: var(--text-muted); }
-.card-due.overdue { color: var(--red); font-weight: 700; }
-.card-hours  { color: var(--text-muted); }
-
-.kanban-add-btn {
-  font-size: .78rem;
-  padding: 6px 10px;
-  width: 100%;
-  text-align: left;
-  border: 1.5px dashed var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  transition: border-color .15s;
-}
-.kanban-add-btn:hover { border-color: var(--brand); color: var(--brand); }
-
 /* ─── Task table ─────────────────────────────────────────── */
 .filters-bar {
   display: flex;
@@ -762,37 +674,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   border-top: 1px solid var(--border);
 }
 
-/* Stage rows in project form */
-.stages-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
-.stage-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
-}
-.stage-row > *:not(.stage-img-row) { flex-shrink: 0; }
-.stage-img-row { width: 100%; flex-basis: 100%; margin-top: 0; }
-.stage-row.dragging { opacity: .4; }
-.drag-handle { color: var(--text-muted); cursor: grab; font-size: 1.1rem; user-select: none; }
-.stage-name-input {
-  flex: 1;
-  padding: 5px 8px;
-  border: 1.5px solid transparent;
-  border-radius: 6px;
-  font-family: var(--font-body);
-  font-size: .88rem;
-  background: transparent;
-  outline: none;
-  transition: border-color .15s;
-}
-.stage-name-input:focus { border-color: var(--brand); background: var(--surface); }
-.stage-remove { color: var(--text-muted); font-size: .8rem; }
-.stage-remove:hover { color: var(--red); }
-
 /* ─── Toast ──────────────────────────────────────────────── */
 #toast-container {
   position: fixed;
@@ -827,62 +708,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   padding: 24px;
 }
 .empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
-
-/* ─── Project delete confirmation panel ─────────────────── */
-.delete-confirm-panel {
-  margin-top: 16px;
-  padding: 16px;
-  background: var(--red-light);
-  border: 1.5px solid var(--red);
-  border-radius: var(--radius-sm);
-}
-.delete-confirm-msg {
-  font-size: .88rem;
-  color: var(--text);
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-.delete-confirm-panel input[type="text"] {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1.5px solid var(--red);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: .88rem;
-  outline: none;
-  margin-bottom: 10px;
-  background: var(--surface);
-  transition: box-shadow .15s;
-}
-.delete-confirm-panel input[type="text"]:focus {
-  box-shadow: 0 0 0 3px rgba(239,71,111,.18);
-}
-.delete-confirm-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* ─── Kanban column cover image ──────────────────────────── */
-.kanban-col-cover {
-  width: 100%;
-  height: 100px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  border-radius: var(--radius) var(--radius) 0 0;
-  flex-shrink: 0;
-}
-
-/* ─── Kanban card cover image ────────────────────────────── */
-.card-cover {
-  margin: -10px -12px 8px;
-  height: 90px;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-}
 
 /* ─── Category image settings row ───────────────────────── */
 .cat-row-main {
@@ -921,39 +746,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   transition: border-color .15s;
 }
 .cat-img-input:focus { border-color: var(--brand); }
-
-/* ─── Stage image row in project form ────────────────────── */
-.stage-img-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 6px;
-  padding: 6px 8px;
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
-}
-.stage-img-preview {
-  width: 56px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 6px;
-  flex-shrink: 0;
-}
-.stage-img-placeholder {
-  background: var(--border);
-}
-.stage-img-input {
-  flex: 1;
-  padding: 5px 8px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: .82rem;
-  outline: none;
-  transition: border-color .15s;
-}
-.stage-img-input:focus { border-color: var(--brand); }
 
 /* ─── Unschedule drop zone (weekly view) ─────────────────── */
 .unschedule-hint {

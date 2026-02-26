@@ -19,7 +19,6 @@ import {
 import { renderDashboard } from "./views/dashboard.js";
 import { renderWeekly }    from "./views/weekly.js";
 import { renderDaily }     from "./views/daily.js";
-import { renderProjects }  from "./views/projects.js";
 import { renderTasks }     from "./views/tasks.js";
 import { renderSettings }  from "./views/settings.js";
 
@@ -29,8 +28,7 @@ const VIEWS = {
   dashboard: renderDashboard,
   weekly:    renderWeekly,
   daily:     renderDaily,
-  projects:  renderProjects,
-  tasks:     renderTasks,
+tasks:     renderTasks,
   settings:  renderSettings,
 };
 
