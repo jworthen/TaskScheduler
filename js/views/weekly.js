@@ -103,11 +103,13 @@ export function renderWeekly() {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+const HEADER_H = 44; // must match .week-col-header height in CSS
+
 function buildTimeGutter() {
   let html = "";
   for (let h = HOUR_START; h <= HOUR_END; h++) {
     const label = h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h - 12} PM`;
-    html += `<div class="time-label" style="top:${(h - HOUR_START) * SLOT_H}px">${label}</div>`;
+    html += `<div class="time-label" style="top:${HEADER_H + (h - HOUR_START) * SLOT_H}px">${label}</div>`;
   }
   return html;
 }

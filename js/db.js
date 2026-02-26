@@ -57,13 +57,6 @@ export function fromTs(ts) {
 
 // ─── DEFAULT SEED DATA ───────────────────────────────────────────────────────
 
-export const DEFAULT_CATEGORIES = [
-  { id: "social",    name: "Social Media Content",    color: "#f4a261" },
-  { id: "design",    name: "Pattern Design/Drafting",  color: "#9b5de5" },
-  { id: "customer",  name: "Customer Communication",   color: "#00b4d8" },
-  { id: "shipping",  name: "Shipping & Orders",        color: "#57cc99" },
-];
-
 export const DEFAULT_WORK_SLOTS = [
   { id: "morning",   name: "Morning",   startTime: "09:00", endTime: "12:00", color: "#f0e557", days: [1,2,3,4,5] },
   { id: "afternoon", name: "Afternoon", startTime: "13:00", endTime: "17:00", color: "#54c5ba", days: [1,2,3,4,5] },
@@ -91,7 +84,6 @@ export async function loadSettings() {
 
   const defaults = {
     workingHours: DEFAULT_WORKING_HOURS,
-    categories:   DEFAULT_CATEGORIES,
     workSlots:    DEFAULT_WORK_SLOTS,
     calendarConnected: false,
   };

@@ -5,12 +5,11 @@
 import { getState, getBlockedTasks } from "../store.js";
 import { fromTs, completeTask, deleteTask } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { categoryChip, priorityBadge, formatDate, toast, confirmAction } from "../ui-utils.js";
+import { priorityBadge, formatDate, toast, confirmAction } from "../ui-utils.js";
 
 export function renderTasks() {
   const el = document.getElementById("view-tasks");
-  const { tasks, projects, settings } = getState();
-  const categories = settings?.categories ?? [];
+  const { tasks, projects } = getState();
 
   el.innerHTML = `
     <div class="view-header">
@@ -25,10 +24,6 @@ export function renderTasks() {
       <select id="filter-project">
         <option value="">All projects</option>
         ${projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}
-      </select>
-      <select id="filter-category">
-        <option value="">All categories</option>
-        ${categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("")}
       </select>
       <select id="filter-priority">
         <option value="">All priorities</option>
@@ -54,26 +49,23 @@ export function renderTasks() {
   el.querySelector("#tasks-new").addEventListener("click", () => openTaskForm());
 
   // Filter listeners
-  ["filter-project","filter-category","filter-priority","filter-status","filter-search"]
+  ["filter-project","filter-priority","filter-status","filter-search"]
     .forEach(id => el.querySelector("#" + id).addEventListener("input", () => applyFilters(el)));
 
   applyFilters(el);
 }
 
 function applyFilters(el) {
-  const { tasks, settings } = getState();
-  const categories = settings?.categories ?? [];
+  const { tasks } = getState();
   const blocked    = getBlockedTasks().map(t => t.id);
 
   const projectId  = el.querySelector("#filter-project").value;
-  const categoryId = el.querySelector("#filter-category").value;
   const priority   = el.querySelector("#filter-priority").value;
   const status     = el.querySelector("#filter-status").value;
   const search     = el.querySelector("#filter-search").value.toLowerCase();
 
   let filtered = tasks.filter(t => {
     if (projectId  && t.projectId  !== projectId)  return false;
-    if (categoryId && t.categoryId !== categoryId)  return false;
     if (priority   && t.priority   !== priority)    return false;
     if (status === "active"    && t.completed)       return false;
     if (status === "completed" && !t.completed)      return false;
@@ -106,7 +98,6 @@ function applyFilters(el) {
           <th>Done</th>
           <th>Task</th>
           <th>Project</th>
-          <th>Category</th>
           <th>Priority</th>
           <th>Due</th>
           <th>Hours</th>
@@ -115,7 +106,7 @@ function applyFilters(el) {
         </tr>
       </thead>
       <tbody>
-        ${filtered.map(t => taskRow(t, categories, blocked)).join("")}
+        ${filtered.map(t => taskRow(t, blocked)).join("")}
       </tbody>
     </table>
   `;
@@ -168,9 +159,8 @@ function applyFilters(el) {
   });
 }
 
-function taskRow(task, categories, blockedIds) {
+function taskRow(task, blockedIds) {
   const { projects } = getState();
-  const cat     = categories.find(c => c.id === task.categoryId);
   const project = projects.find(p => p.id === task.projectId);
   const due     = fromTs(task.dueDate);
   const sched   = fromTs(task.scheduledStart);
@@ -190,7 +180,6 @@ function taskRow(task, categories, blockedIds) {
         ${isBlocked ? ` <span class="blocked-badge">🚫</span>` : ""}
       </td>
       <td>${project ? esc(project.name) : "—"}</td>
-      <td>${cat ? categoryChip(cat) : "—"}</td>
       <td>${priorityBadge(task.priority)}</td>
       <td class="${due && due < now && !task.completed ? "overdue" : ""}">${due ? formatDate(due) : "—"}</td>
       <td>${task.estimatedHours}h</td>
