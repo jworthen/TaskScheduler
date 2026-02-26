@@ -11,15 +11,18 @@
  *   2. App redirects to Trello OAuth, which appends #token=<value> on return.
  *   3. Key + token are persisted in localStorage.
  *
- * Scheduling metadata (estimatedHours, scheduledStart/End, priority override,
- * manuallyScheduled, blockerIds) is stored in localStorage since Trello's
- * free tier does not expose custom fields via the REST API.
+ * estimatedHours is read from the Trello "Effort" custom field (read-only).
+ * All other scheduling metadata (scheduledStart/End, priority override,
+ * manuallyScheduled, blockerIds) remains in localStorage.
  */
 
 const API = "https://api.trello.com/1";
 
 let _key   = "";
 let _token = "";
+
+// Cache of custom field definitions per board: boardId → { effortFieldId: string|null }
+const _cfCache = new Map();
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -109,8 +112,22 @@ async function put(path, body) {
 // ─── Boards (Projects) ────────────────────────────────────────────────────────
 
 /**
+ * Fetch custom field definitions for a board and cache the Effort field ID.
+ * Matches the first number-type field whose name contains "effort" or "hours".
+ */
+async function loadCustomFieldDefs(boardId) {
+  try {
+    const defs = await get(`/boards/${boardId}/customFields`);
+    const field = defs.find(f => f.type === "number" && /effort|hours/i.test(f.name));
+    _cfCache.set(boardId, { effortFieldId: field?.id ?? null });
+  } catch {
+    _cfCache.set(boardId, { effortFieldId: null });
+  }
+}
+
+/**
  * Fetch all open boards for the authenticated user,
- * enriched with their lists (stages).
+ * enriched with their lists (stages) and custom field definitions.
  */
 export async function getBoards() {
   const boards = await get("/members/me/boards", {
@@ -119,7 +136,7 @@ export async function getBoards() {
   });
   const enriched = await Promise.all(
     boards.map(async b => {
-      const stages = await getLists(b.id);
+      const [stages] = await Promise.all([getLists(b.id), loadCustomFieldDefs(b.id)]);
       return { id: b.id, name: b.name, url: b.shortUrl, stages };
     })
   );
@@ -140,11 +157,12 @@ export async function getLists(boardId) {
 
 // ─── Cards (Tasks) ────────────────────────────────────────────────────────────
 
-/** Fetch all open (non-archived) cards for a board. */
+/** Fetch all open (non-archived) cards for a board, including custom field values. */
 export async function getCards(boardId) {
   const cards = await get(`/boards/${boardId}/cards`, {
     filter: "open",
     fields: "id,name,desc,due,dueComplete,idList,labels,shortUrl",
+    customFieldItems: "true",
   });
   return cards.map(c => cardToTask(c, boardId));
 }
@@ -164,8 +182,9 @@ export async function archiveCard(cardId) {
   return put(`/cards/${cardId}`, { closed: true });
 }
 
-// ─── Scheduling metadata (localStorage) ──────────────────────────────────────
-// Trello's free tier has no custom fields API, so scheduling data lives locally.
+// ─── Scheduling metadata ──────────────────────────────────────────────────────
+// estimatedHours is read from the Trello "Effort" custom field (read-only).
+// All other scheduling metadata lives in localStorage.
 
 const SCHED_NS = "ts_sched_";
 
@@ -197,6 +216,16 @@ function labelsToPriority(labels) {
 /** Convert a Trello card API response to the internal task shape. */
 export function cardToTask(card, boardId) {
   const meta = getSchedMeta(card.id);
+
+  // Read estimatedHours from the Trello "Effort" custom field if available
+  const { effortFieldId } = _cfCache.get(boardId) ?? {};
+  const effortItem = effortFieldId
+    ? (card.customFieldItems ?? []).find(f => f.idCustomField === effortFieldId)
+    : null;
+  const effortFromTrello = effortItem?.value?.number != null
+    ? parseFloat(effortItem.value.number)
+    : null;
+
   return {
     id:                card.id,
     name:              card.name,
@@ -204,7 +233,7 @@ export function cardToTask(card, boardId) {
     projectId:         boardId,
     stageId:           card.idList,
     priority:          meta.priority          ?? labelsToPriority(card.labels),
-    estimatedHours:    meta.estimatedHours    ?? 1,
+    estimatedHours:    effortFromTrello ?? meta.estimatedHours ?? 1,
     dueDate:           card.due               ? new Date(card.due) : null,
     completed:         card.dueComplete        ?? false,
     completedAt:       null,
