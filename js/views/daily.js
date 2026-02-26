@@ -2,9 +2,10 @@
  * views/daily.js — Daily Focus view
  */
 
-import { getState } from "../store.js";
-import { fromTs, completeTask } from "../db.js";
+import { getState, setState } from "../store.js";
+import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
+import { completeCard } from "../trello.js";
 import { formatTime, formatDate, priorityBadge, toast, addDays } from "../ui-utils.js";
 
 let dayOffset = 0;
@@ -42,7 +43,6 @@ export function renderDaily() {
         <span class="day-label">${dateLabel}</span>
         <button class="btn-ghost" id="df-next">Next →</button>
         <button class="btn-ghost" id="df-today">Today</button>
-        <button class="btn-primary" id="df-new-task">+ Task</button>
       </div>
     </div>
 
@@ -65,7 +65,7 @@ export function renderDaily() {
         : `<div class="empty-state">
              <div class="empty-icon">🌸</div>
              <p>No tasks scheduled for ${dateLabel}.</p>
-             <button class="btn-primary mt-sm" id="df-add-empty">Add a task</button>
+             <p class="empty-hint">Run the auto-scheduler in Settings, or drag cards in the Weekly view.</p>
            </div>`
       }
     </div>
@@ -78,19 +78,20 @@ export function renderDaily() {
   el.querySelector("#df-prev").addEventListener("click", () => { dayOffset--; renderDaily(); });
   el.querySelector("#df-next").addEventListener("click", () => { dayOffset++; renderDaily(); });
   el.querySelector("#df-today").addEventListener("click", () => { dayOffset = 0; renderDaily(); });
-  el.querySelector("#df-new-task").addEventListener("click", () => openTaskForm());
-  el.querySelector("#df-add-empty")?.addEventListener("click", () => openTaskForm());
 
-  // Complete toggle
+  // Complete toggle — marks dueComplete in Trello
   el.querySelectorAll(".complete-btn").forEach(btn => {
     btn.addEventListener("click", async e => {
       e.stopPropagation();
       const taskId = btn.closest("[data-task-id]").dataset.taskId;
       const task   = getState().tasks.find(t => t.id === taskId);
-      if (!task) return;
+      if (!task || task.completed) return;
       try {
-        await completeTask(task);
-        toast(task.recurring ? "Done! Next occurrence created 🔄" : "Task complete! 🎉", "success");
+        await completeCard(taskId);
+        const { tasks } = getState();
+        setState({ tasks: tasks.map(t => t.id === taskId ? { ...t, completed: true } : t) });
+        toast("Task complete! 🎉", "success");
+        renderDaily();
       } catch (err) {
         toast("Error: " + err.message, "error");
       }

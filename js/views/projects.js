@@ -1,44 +1,54 @@
 /**
- * views/projects.js — Kanban board per project, with stage columns
+ * views/projects.js — Kanban board view backed by Trello
+ *
+ * Boards → Projects (tabs)
+ * Lists  → Columns
+ * Cards  → Task cards
+ *
+ * Boards and lists are managed in Trello. Dragging cards between columns
+ * calls the Trello API to move the card to the new list.
+ * Clicking a card opens the scheduling metadata modal.
  */
 
-import { getState } from "../store.js";
-import { fromTs, updateTask } from "../db.js";
+import { getState, setState } from "../store.js";
+import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { openProjectForm } from "../project-form.js";
+import { moveCard } from "../trello.js";
 import { priorityBadge, toast, formatDate } from "../ui-utils.js";
 
 export function renderProjects() {
   const el = document.getElementById("view-projects");
   const { projects, tasks } = getState();
 
-  // Pick selected project (from dashboard chip click or first)
+  // Pick selected board
   let selectedId = window.__selectedProjectId ?? projects[0]?.id ?? null;
   if (!projects.find(p => p.id === selectedId)) selectedId = projects[0]?.id ?? null;
+
+  const selectedBoard = projects.find(p => p.id === selectedId);
 
   el.innerHTML = `
     <div class="view-header">
       <h2>Projects 📁</h2>
       <div class="header-actions">
-        <button class="btn-secondary" id="proj-new-project">+ New Project</button>
-        ${selectedId ? `<button class="btn-ghost" id="proj-edit-project">✏ Edit project</button>` : ""}
-        <button class="btn-primary"   id="proj-new-task" ${!selectedId ? "disabled" : ""}>+ Task</button>
+        ${selectedBoard?.url
+          ? `<a href="${selectedBoard.url}" target="_blank" rel="noopener" class="btn-ghost">Open in Trello ↗</a>`
+          : ""}
       </div>
     </div>
 
-    <!-- Project tabs -->
+    <!-- Board tabs -->
     <div class="project-tabs">
       ${projects.map(p => `
         <button class="project-tab ${p.id === selectedId ? "active" : ""}" data-project-id="${p.id}">
           ${esc(p.name)}
         </button>
       `).join("")}
-      ${!projects.length ? `<p class="empty-state">No projects yet.</p>` : ""}
+      ${!projects.length ? `<p class="empty-state">No Trello boards found. Make sure you're connected in Settings.</p>` : ""}
     </div>
 
-    <!-- Board -->
+    <!-- Kanban board -->
     <div id="kanban-board" class="kanban-board">
-      ${selectedId ? buildKanban(selectedId, projects, tasks) : `<p class="empty-state">Select or create a project.</p>`}
+      ${selectedId ? buildKanban(selectedId, projects, tasks) : `<p class="empty-state">Select a board above.</p>`}
     </div>
   `;
 
@@ -50,14 +60,7 @@ export function renderProjects() {
     });
   });
 
-  el.querySelector("#proj-new-project").addEventListener("click", () => openProjectForm());
-  if (selectedId) {
-    const selectedProject = projects.find(p => p.id === selectedId);
-    el.querySelector("#proj-edit-project")?.addEventListener("click", () => openProjectForm(selectedProject));
-    el.querySelector("#proj-new-task").addEventListener("click", () => openTaskForm(null, selectedId));
-  }
-
-  // Task cards
+  // Card click → scheduling metadata modal
   el.querySelectorAll(".kanban-task-card").forEach(card => {
     card.addEventListener("click", e => {
       if (e.defaultPrevented) return;
@@ -67,46 +70,40 @@ export function renderProjects() {
   });
 
   // Drag-and-drop between columns
-  if (selectedId) initKanbanDrag(el, selectedId);
+  if (selectedId) initKanbanDrag(el);
 }
 
-function buildKanban(projectId, projects, tasks) {
-  const project = projects.find(p => p.id === projectId);
+function buildKanban(boardId, projects, tasks) {
+  const project = projects.find(p => p.id === boardId);
   if (!project) return "";
 
-  const stages  = [...(project.stages ?? [])].sort((a, b) => a.order - b.order);
-  const projTasks = tasks.filter(t => t.projectId === projectId);
+  const stages     = [...(project.stages ?? [])].sort((a, b) => a.order - b.order);
+  const boardTasks = tasks.filter(t => t.projectId === boardId);
 
   return `
     <div class="kanban-columns">
       ${stages.map(stage => {
-        const stageTasks = projTasks.filter(t => t.stageId === stage.id);
-        const colCover = stage.imageUrl
-          ? `<div class="kanban-col-cover" style="background-image:url('${esc(stage.imageUrl)}')"></div>`
-          : "";
+        const stageTasks = boardTasks.filter(t => t.stageId === stage.id);
         return `
           <div class="kanban-col" data-stage-id="${stage.id}">
-            ${colCover}
             <div class="kanban-col-header">
               <span class="col-name">${esc(stage.name)}</span>
               <span class="col-count">${stageTasks.length}</span>
             </div>
             <div class="kanban-col-body" data-stage-id="${stage.id}">
               ${stageTasks.map(t => kanbanCard(t)).join("")}
-              <button class="btn-ghost kanban-add-btn" data-stage-id="${stage.id}">+ Add task</button>
             </div>
           </div>
         `;
       }).join("")}
 
-      <!-- Tasks with no stage -->
       ${(() => {
-        const unstaged = projTasks.filter(t => !t.stageId);
+        const unstaged = boardTasks.filter(t => !t.stageId);
         if (!unstaged.length) return "";
         return `
           <div class="kanban-col" data-stage-id="">
             <div class="kanban-col-header">
-              <span class="col-name">Unstaged</span>
+              <span class="col-name">Unsorted</span>
               <span class="col-count">${unstaged.length}</span>
             </div>
             <div class="kanban-col-body" data-stage-id="">
@@ -124,34 +121,26 @@ function kanbanCard(task) {
   const now = new Date();
 
   return `
-    <div class="kanban-task-card ${task.completed ? "task-completed" : ""} ${task.blockerIds?.length ? "is-blocked" : ""}"
+    <div class="kanban-task-card ${task.completed ? "task-completed" : ""}"
          data-task-id="${task.id}"
          draggable="true">
       <div class="card-name">${esc(task.name)}</div>
       <div class="card-meta">
         ${priorityBadge(task.priority)}
+        ${(task.labels ?? []).map(l => `<span class="trello-label" style="background:${labelColor(l.color)}">${esc(l.name ?? "")}</span>`).join("")}
       </div>
       <div class="card-footer">
-        ${due ? `<span class="card-due ${due < now ? "overdue" : ""}">📅 ${formatDate(due)}</span>` : ""}
+        ${due ? `<span class="card-due ${due < now && !task.completed ? "overdue" : ""}">📅 ${formatDate(due)}</span>` : ""}
         <span class="card-hours">⏱ ${task.estimatedHours}h</span>
         ${task.completed ? `<span class="done-badge">✅</span>` : ""}
-        ${task.blockerIds?.length ? `<span class="blocked-badge">🚫</span>` : ""}
-        ${task.recurring ? `<span class="recurring-badge">🔄</span>` : ""}
+        ${task.trelloUrl ? `<a href="${task.trelloUrl}" target="_blank" rel="noopener" class="trello-card-link" title="Open in Trello" onclick="event.stopPropagation()">↗</a>` : ""}
       </div>
     </div>
   `;
 }
 
-function initKanbanDrag(container, projectId) {
+function initKanbanDrag(container) {
   let dragging = null;
-
-  // Add-task buttons in column headers
-  container.querySelectorAll(".kanban-add-btn").forEach(btn => {
-    btn.addEventListener("click", e => {
-      e.stopPropagation();
-      openTaskForm(null, projectId);
-    });
-  });
 
   container.addEventListener("dragstart", e => {
     const card = e.target.closest(".kanban-task-card");
@@ -179,26 +168,40 @@ function initKanbanDrag(container, projectId) {
       col.classList.remove("drag-over");
       if (!dragging) return;
 
-      const taskId  = dragging.dataset.taskId;
-      const stageId = col.dataset.stageId || null;
+      const taskId = dragging.dataset.taskId;
+      const listId = col.dataset.stageId || null;
+      if (!listId) return; // don't allow dropping into the "Unsorted" pseudo-column
 
-      // Insert card visually
+      // Optimistic UI
       const afterEl = getDragAfterCard(col, e.clientY);
       if (afterEl) col.insertBefore(dragging, afterEl);
-      else {
-        const addBtn = col.querySelector(".kanban-add-btn");
-        if (addBtn) col.insertBefore(dragging, addBtn);
-        else col.appendChild(dragging);
-      }
+      else col.appendChild(dragging);
+
+      // Update store optimistically
+      const { tasks } = getState();
+      const updated = tasks.map(t => t.id === taskId ? { ...t, stageId: listId } : t);
+      setState({ tasks: updated });
 
       try {
-        await updateTask(taskId, { stageId });
-        toast("Stage updated!", "success");
+        await moveCard(taskId, listId);
+        toast("Card moved! 📋", "success");
       } catch (err) {
-        toast("Could not update stage: " + err.message, "error");
+        setState({ tasks }); // revert
+        toast("Could not move card: " + err.message, "error");
       }
     });
   });
+}
+
+/** Map Trello label colour names to CSS colour values. */
+function labelColor(color) {
+  const map = {
+    red:    "#eb5a46", orange: "#ff9f1a", yellow: "#f2d600",
+    green:  "#61bd4f", sky:    "#00c2e0", blue:   "#0079bf",
+    purple: "#c377e0", pink:   "#ff78cb", lime:   "#51e898",
+    black:  "#344563",
+  };
+  return map[color] ?? "#ddd";
 }
 
 function getDragAfterCard(col, y) {

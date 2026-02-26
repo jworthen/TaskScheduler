@@ -7,10 +7,14 @@
  *   - Find the latest contiguous window of available time that fits
  *     estimatedHours, respecting working hours and calendar busy blocks
  *   - If no window found before today → mark as "cannot schedule" warning
+ *
+ * Scheduling metadata is persisted via saveSchedMeta (localStorage) since
+ * tasks live in Trello rather than Firestore.
  */
 
-import { fromTs, toTs, updateTask } from "./db.js";
-import { getState, getSchedulableTasks } from "./store.js";
+import { fromTs } from "./db.js";
+import { saveSchedMeta } from "./trello.js";
+import { getState, getSchedulableTasks, setState } from "./store.js";
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
@@ -52,11 +56,11 @@ export function buildAvailableSlots(from, to, workingHours, busyBlocks) {
 
 /**
  * Schedule all unscheduled schedulable tasks.
- * Mutates Firestore via updateTask.
+ * Persists scheduling metadata to localStorage via saveSchedMeta.
  * Returns { scheduled: [...], warnings: [...] }
  */
 export async function runScheduler() {
-  const { settings, calendarEvents } = getState();
+  const { settings, calendarEvents, tasks: allTasks } = getState();
   const workingHours = settings?.workingHours ?? defaultWorkingHours();
   const busyBlocks   = calendarEvents.map(e => ({
     start: new Date(e.start),
@@ -74,23 +78,26 @@ export async function runScheduler() {
     return da - db_;
   });
 
-  const now        = new Date();
-  const horizon    = new Date(now);
+  const now     = new Date();
+  const horizon = new Date(now);
   horizon.setDate(horizon.getDate() + 60); // look 60 days ahead
 
   // Build a mutable occupied list (already-scheduled tasks count as busy)
-  const occupied = []; // {start:Date, end:Date}
+  const occupied = []; // { start: Date, end: Date }
 
   const scheduled = [];
   const warnings  = [];
 
+  // Track updated tasks to batch into a single setState call
+  const updatedMeta = {}; // taskId → { scheduledStart, scheduledEnd }
+
   for (const task of tasks) {
     if (!task.dueDate) continue; // can't schedule without a due date
 
-    const due          = fromTs(task.dueDate);
-    const neededMins   = (task.estimatedHours ?? 1) * 60;
-    const rangeEnd     = due   < horizon ? due   : horizon;
-    const rangeStart   = now   < rangeEnd ? now   : rangeEnd;
+    const due        = fromTs(task.dueDate);
+    const neededMins = (task.estimatedHours ?? 1) * 60;
+    const rangeEnd   = due   < horizon ? due   : horizon;
+    const rangeStart = now   < rangeEnd ? now   : rangeEnd;
 
     const slots = buildAvailableSlots(rangeStart, rangeEnd, workingHours, [
       ...busyBlocks,
@@ -100,21 +107,30 @@ export async function runScheduler() {
     // Walk backward: latest slot first
     const placed = placeLatest(slots, neededMins, due);
     if (placed) {
-      await updateTask(task.id, {
-        scheduledStart: placed.start,
-        scheduledEnd:   placed.end,
+      saveSchedMeta(task.id, {
+        scheduledStart: placed.start.toISOString(),
+        scheduledEnd:   placed.end.toISOString(),
       });
       occupied.push({ start: placed.start, end: placed.end });
+      updatedMeta[task.id] = { scheduledStart: placed.start, scheduledEnd: placed.end };
       scheduled.push({ task, placed });
     } else {
       warnings.push(task);
     }
   }
 
+  // Update the in-memory store in one pass
+  if (Object.keys(updatedMeta).length) {
+    const updated = allTasks.map(t =>
+      updatedMeta[t.id] ? { ...t, ...updatedMeta[t.id] } : t
+    );
+    setState({ tasks: updated });
+  }
+
   return { scheduled, warnings };
 }
 
-// ─── Internal helpers ────────────────────────────────────────────────────────
+// ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function placeLatest(slots, neededMins, due) {
   // Try from the last day backward

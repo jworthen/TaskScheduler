@@ -4,12 +4,14 @@
  */
 
 const state = {
-  projects:         [],
-  tasks:            [],
-  settings:         null,
-  currentView:      "dashboard",
-  calendarEvents:   [],   // read from Google Calendar
+  projects:          [],
+  tasks:             [],
+  settings:          null,
+  currentView:       "dashboard",
+  calendarEvents:    [],   // read from Google Calendar
   calendarConnected: false,
+  trelloConnected:   false,
+  loading:           false,
 };
 
 const subscribers = {};

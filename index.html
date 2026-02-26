@@ -44,10 +44,10 @@
 
     <!-- Main content -->
     <main id="main-content">
-      <!-- Config banner (shown when Firebase is not configured) -->
+      <!-- Config banner (shown when Trello is not connected) -->
       <div id="config-banner" class="banner banner-warn" style="display:none;">
-        <strong>🔧 Firebase not configured.</strong>
-        Open <code>js/firebase-config.js</code> and add your project credentials.
+        <strong>🔗 Trello not connected.</strong>
+        Connect your Trello account to load boards and cards.
         <a href="#" data-view="settings">Go to Settings</a>
       </div>
 
@@ -72,20 +72,6 @@
   <!-- ===== TOAST ===== -->
   <div id="toast-container"></div>
 
-  <!-- ===== Firebase (CDN) ===== -->
-  <!-- SETUP: Replace these with your Firebase project's SDK snippet.
-       1. Go to https://console.firebase.google.com/
-       2. Create (or open) a project → Project Settings → Your apps → Web app
-       3. Copy the firebaseConfig object values into js/firebase-config.js
-       4. In Firestore Database, create a database in Native mode
-       5. Set security rules to allow read/write (single-user, local use):
-              rules_version = '2';
-              service cloud.firestore {
-                match /databases/{database}/documents {
-                  match /{document=**} { allow read, write: if true; }
-                }
-              }
-  -->
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

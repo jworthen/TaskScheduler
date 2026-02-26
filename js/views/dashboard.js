@@ -6,7 +6,6 @@ import { getState, getBlockedTasks } from "../store.js";
 import { fromTs } from "../db.js";
 import { formatDate, priorityBadge } from "../ui-utils.js";
 import { openTaskForm } from "../task-form.js";
-import { openProjectForm } from "../project-form.js";
 
 export function renderDashboard() {
   const el = document.getElementById("view-dashboard");
@@ -40,10 +39,6 @@ export function renderDashboard() {
   el.innerHTML = `
     <div class="view-header">
       <h2>Dashboard 🏠</h2>
-      <div class="header-actions">
-        <button class="btn-secondary" id="dash-new-project">+ New Project</button>
-        <button class="btn-primary"   id="dash-new-task">+ New Task</button>
-      </div>
     </div>
 
     <!-- Stats row -->
@@ -97,20 +92,16 @@ export function renderDashboard() {
     </section>` : ""}
 
     <section class="dash-section">
-      <h3 class="section-title">📁 Projects</h3>
+      <h3 class="section-title">📁 Boards</h3>
       ${projects.length
         ? `<div class="project-chips">${projects.map(projectChip).join("")}</div>`
-        : `<p class="empty-state">No projects yet — create one to get started!</p>`}
+        : `<p class="empty-state">No Trello boards found. Connect in Settings.</p>`}
     </section>
   `;
 
-  el.querySelector("#dash-new-task").addEventListener("click", () => openTaskForm());
-  el.querySelector("#dash-new-project").addEventListener("click", () => openProjectForm());
-
   el.querySelectorAll(".task-row").forEach(row => {
     row.addEventListener("click", () => {
-      const taskId = row.dataset.taskId;
-      const task   = getState().tasks.find(t => t.id === taskId);
+      const task = getState().tasks.find(t => t.id === row.dataset.taskId);
       if (task) openTaskForm(task);
     });
   });
@@ -151,7 +142,8 @@ function projectChip(project) {
   return `
     <div class="project-chip" data-project-id="${project.id}">
       <span class="project-chip-name">${esc(project.name)}</span>
-      <span class="project-chip-count">${taskCount} task${taskCount !== 1 ? "s" : ""}</span>
+      <span class="project-chip-count">${taskCount} card${taskCount !== 1 ? "s" : ""}</span>
+      ${project.url ? `<a href="${project.url}" target="_blank" rel="noopener" class="trello-card-link" onclick="event.stopPropagation()" title="Open in Trello">↗</a>` : ""}
     </div>
   `;
 }
