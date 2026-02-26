@@ -93,12 +93,6 @@ export function renderDashboard() {
       </div>
     </section>` : ""}
 
-    <section class="dash-section">
-      <h3 class="section-title">📁 Boards</h3>
-      ${projects.length
-        ? `<div class="project-chips">${projects.map(projectChip).join("")}</div>`
-        : `<p class="empty-state">No Trello boards found. Connect in Settings.</p>`}
-    </section>
   `;
 
   el.querySelectorAll(".task-row").forEach(row => {
@@ -108,14 +102,6 @@ export function renderDashboard() {
     });
   });
 
-  el.querySelectorAll(".project-chip").forEach(chip => {
-    chip.addEventListener("click", () => {
-      const id = chip.dataset.projectId;
-      document.querySelector(`[data-view="projects"]`).click();
-      // Will be picked up by the projects view
-      window.__selectedProjectId = id;
-    });
-  });
 }
 
 function taskRow(task, showTime = false) {
@@ -142,16 +128,6 @@ function taskRow(task, showTime = false) {
   `;
 }
 
-function projectChip(project) {
-  const taskCount = getState().tasks.filter(t => t.projectId === project.id && !t.completed).length;
-  return `
-    <div class="project-chip" data-project-id="${project.id}">
-      <span class="project-chip-name">${esc(project.name)}</span>
-      <span class="project-chip-count">${taskCount} card${taskCount !== 1 ? "s" : ""}</span>
-      ${project.url ? `<a href="${project.url}" target="_blank" rel="noopener" class="trello-card-link" onclick="event.stopPropagation()" title="Open in Trello">↗</a>` : ""}
-    </div>
-  `;
-}
 
 function formatTime(date) {
   return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
