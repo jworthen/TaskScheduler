@@ -10,8 +10,7 @@
 import { getState, setState, getBlockedTasks } from "../store.js";
 import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { completeCard, archiveCard } from "../trello.js";
-import { priorityBadge, formatDate, toast, confirmAction } from "../ui-utils.js";
+import { priorityBadge, formatDate } from "../ui-utils.js";
 
 export function renderTasks() {
   const el = document.getElementById("view-tasks");
@@ -115,48 +114,12 @@ function applyFilters(el) {
     </table>
   `;
 
-  // Complete toggle — marks dueComplete in Trello
-  container.querySelectorAll(".complete-toggle").forEach(btn => {
-    btn.addEventListener("click", async e => {
-      e.stopPropagation();
-      const taskId = btn.dataset.taskId;
-      const task   = getState().tasks.find(t => t.id === taskId);
-      if (!task || task.completed) return;
-      try {
-        await completeCard(taskId);
-        // Optimistic store update
-        const { tasks } = getState();
-        setState({ tasks: tasks.map(t => t.id === taskId ? { ...t, completed: true } : t) });
-        toast("Done! 🎉", "success");
-      } catch (err) {
-        toast("Error: " + err.message, "error");
-      }
-    });
-  });
-
   // Edit scheduling metadata
   container.querySelectorAll(".task-edit-btn").forEach(btn => {
     btn.addEventListener("click", e => {
       e.stopPropagation();
       const task = getState().tasks.find(t => t.id === btn.dataset.taskId);
       if (task) openTaskForm(task);
-    });
-  });
-
-  // Archive card in Trello
-  container.querySelectorAll(".task-delete-btn").forEach(btn => {
-    btn.addEventListener("click", async e => {
-      e.stopPropagation();
-      if (!confirmAction("Archive this card in Trello?")) return;
-      try {
-        await archiveCard(btn.dataset.taskId);
-        // Remove from store optimistically
-        const { tasks } = getState();
-        setState({ tasks: tasks.filter(t => t.id !== btn.dataset.taskId) });
-        toast("Card archived in Trello.", "info");
-      } catch (err) {
-        toast("Error: " + err.message, "error");
-      }
     });
   });
 
@@ -179,12 +142,7 @@ function taskRow(task, blockedIds) {
 
   return `
     <tr data-task-id="${task.id}" class="${task.completed ? "row-completed" : ""} ${isBlocked ? "row-blocked" : ""}">
-      <td>
-        <button class="complete-toggle" data-task-id="${task.id}" title="Mark complete in Trello"
-                ${task.completed ? "disabled" : ""}>
-          ${task.completed ? "✅" : "⬜"}
-        </button>
-      </td>
+      <td>${task.completed ? "✅" : "⬜"}</td>
       <td class="task-name-cell">
         ${esc(task.name)}
         ${isBlocked ? ` <span class="blocked-badge">🚫</span>` : ""}
@@ -196,8 +154,7 @@ function taskRow(task, blockedIds) {
       <td>${task.estimatedHours}h</td>
       <td>${sched ? formatDate(sched) : "—"}</td>
       <td class="task-actions" onclick="event.stopPropagation()">
-        <button class="btn-icon task-edit-btn"   data-task-id="${task.id}" title="Edit scheduling">⚙️</button>
-        <button class="btn-icon task-delete-btn" data-task-id="${task.id}" title="Archive in Trello">🗑️</button>
+        <button class="btn-icon task-edit-btn" data-task-id="${task.id}" title="Edit scheduling">⚙️</button>
       </td>
     </tr>
   `;

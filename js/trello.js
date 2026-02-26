@@ -99,16 +99,6 @@ async function get(path, params = {}) {
   return res.json();
 }
 
-async function put(path, body) {
-  const res = await fetch(`${API}${path}?${authQS()}`, {
-    method:  "PUT",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`Trello ${res.status}: ${await res.text()}`);
-  return res.json();
-}
-
 // ─── Boards (Projects) ────────────────────────────────────────────────────────
 
 /**
@@ -165,21 +155,6 @@ export async function getCards(boardId) {
     customFieldItems: "true",
   });
   return cards.map(c => cardToTask(c, boardId));
-}
-
-/** Move a card to a different list (for Kanban drag-and-drop). */
-export async function moveCard(cardId, listId) {
-  return put(`/cards/${cardId}`, { idList: listId });
-}
-
-/** Mark a card's due date as complete in Trello. */
-export async function completeCard(cardId) {
-  return put(`/cards/${cardId}`, { dueComplete: true });
-}
-
-/** Archive (close) a card — Trello's equivalent of deleting. */
-export async function archiveCard(cardId) {
-  return put(`/cards/${cardId}`, { closed: true });
 }
 
 // ─── Scheduling metadata ──────────────────────────────────────────────────────

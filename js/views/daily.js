@@ -2,11 +2,10 @@
  * views/daily.js — Daily Focus view
  */
 
-import { getState, setState } from "../store.js";
+import { getState } from "../store.js";
 import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { completeCard } from "../trello.js";
-import { formatTime, formatDate, priorityBadge, toast, addDays } from "../ui-utils.js";
+import { formatTime, formatDate, priorityBadge, addDays } from "../ui-utils.js";
 
 let dayOffset = 0;
 
@@ -79,29 +78,9 @@ export function renderDaily() {
   el.querySelector("#df-next").addEventListener("click", () => { dayOffset++; renderDaily(); });
   el.querySelector("#df-today").addEventListener("click", () => { dayOffset = 0; renderDaily(); });
 
-  // Complete toggle — marks dueComplete in Trello
-  el.querySelectorAll(".complete-btn").forEach(btn => {
-    btn.addEventListener("click", async e => {
-      e.stopPropagation();
-      const taskId = btn.closest("[data-task-id]").dataset.taskId;
-      const task   = getState().tasks.find(t => t.id === taskId);
-      if (!task || task.completed) return;
-      try {
-        await completeCard(taskId);
-        const { tasks } = getState();
-        setState({ tasks: tasks.map(t => t.id === taskId ? { ...t, completed: true } : t) });
-        toast("Task complete! 🎉", "success");
-        renderDaily();
-      } catch (err) {
-        toast("Error: " + err.message, "error");
-      }
-    });
-  });
-
   // Edit on card click
   el.querySelectorAll(".daily-task-card:not(.task-completed)").forEach(card => {
     card.addEventListener("click", e => {
-      if (e.target.closest(".complete-btn")) return;
       const task = getState().tasks.find(t => t.id === card.dataset.taskId);
       if (task) openTaskForm(task);
     });
@@ -123,9 +102,7 @@ function dailyTaskCard(task) {
       <div class="daily-card-body">
         <div class="daily-card-header">
           <span class="task-name ${task.completed ? "strikethrough" : ""}">${esc(task.name)}</span>
-          <button class="complete-btn ${task.completed ? "completed" : ""}" title="Mark complete">
-            ${task.completed ? "✅" : "⬜"}
-          </button>
+          <span class="complete-indicator">${task.completed ? "✅" : "⬜"}</span>
         </div>
         <div class="daily-card-meta">
           ${priorityBadge(task.priority)}

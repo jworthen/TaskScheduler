@@ -13,8 +13,7 @@
 import { getState, setState } from "../store.js";
 import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { moveCard } from "../trello.js";
-import { priorityBadge, toast, formatDate } from "../ui-utils.js";
+import { priorityBadge, formatDate } from "../ui-utils.js";
 
 export function renderProjects() {
   const el = document.getElementById("view-projects");
@@ -163,7 +162,7 @@ function initKanbanDrag(container) {
       col.classList.add("drag-over");
     });
     col.addEventListener("dragleave", () => col.classList.remove("drag-over"));
-    col.addEventListener("drop", async e => {
+    col.addEventListener("drop", e => {
       e.preventDefault();
       col.classList.remove("drag-over");
       if (!dragging) return;
@@ -177,18 +176,10 @@ function initKanbanDrag(container) {
       if (afterEl) col.insertBefore(dragging, afterEl);
       else col.appendChild(dragging);
 
-      // Update store optimistically
+      // Update store (local only — read-only mode, changes don't persist to Trello)
       const { tasks } = getState();
       const updated = tasks.map(t => t.id === taskId ? { ...t, stageId: listId } : t);
       setState({ tasks: updated });
-
-      try {
-        await moveCard(taskId, listId);
-        toast("Card moved! 📋", "success");
-      } catch (err) {
-        setState({ tasks }); // revert
-        toast("Could not move card: " + err.message, "error");
-      }
     });
   });
 }
