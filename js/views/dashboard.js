@@ -117,13 +117,16 @@ export function renderDashboard() {
 }
 
 function taskRow(task, showTime = false) {
+  const { projects } = getState();
+  const project = projects.find(p => p.id === task.projectId);
+  const stage   = project?.stages?.find(s => s.id === task.stageId);
   const due  = fromTs(task.dueDate);
   const sStart = fromTs(task.scheduledStart);
 
   return `
     <div class="task-row" data-task-id="${task.id}">
       <div class="task-row-main">
-        <span class="task-name">${esc(task.name)}</span>
+        <span class="task-name">${esc(task.name)}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}</span>
         ${priorityBadge(task.priority)}
       </div>
       <div class="task-row-meta">

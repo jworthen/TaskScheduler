@@ -135,6 +135,7 @@ function applyFilters(el) {
 function taskRow(task, blockedIds) {
   const { projects } = getState();
   const project   = projects.find(p => p.id === task.projectId);
+  const stage     = project?.stages?.find(s => s.id === task.stageId);
   const due       = fromTs(task.dueDate);
   const sched     = fromTs(task.scheduledStart);
   const isBlocked = blockedIds.includes(task.id);
@@ -144,7 +145,7 @@ function taskRow(task, blockedIds) {
     <tr data-task-id="${task.id}" class="${task.completed ? "row-completed" : ""} ${isBlocked ? "row-blocked" : ""}">
       <td>${task.completed ? "✅" : "⬜"}</td>
       <td class="task-name-cell">
-        ${esc(task.name)}
+        ${esc(task.name)}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}
         ${isBlocked ? ` <span class="blocked-badge">🚫</span>` : ""}
         ${task.trelloUrl ? ` <a href="${task.trelloUrl}" target="_blank" rel="noopener" class="trello-card-link" onclick="event.stopPropagation()" title="Open in Trello">↗</a>` : ""}
       </td>
