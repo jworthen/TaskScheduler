@@ -13,11 +13,13 @@ export function renderDashboard() {
 
   const now        = new Date();
   const weekEnd    = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
-  const dueSoon = tasks.filter(t => {
-    if (t.completed) return false;
-    const due = fromTs(t.dueDate);
-    return due && due <= weekEnd && due >= now;
-  });
+  const dueSoon = tasks
+    .filter(t => {
+      if (t.completed) return false;
+      const due = fromTs(t.dueDate);
+      return due && due <= weekEnd && due >= now;
+    })
+    .sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
 
   const todayTasks = tasks.filter(t => {
     if (t.completed) return false;
