@@ -102,16 +102,33 @@ async function get(path, params = {}) {
 // ─── Boards (Projects) ────────────────────────────────────────────────────────
 
 /**
- * Fetch custom field definitions for a board and cache the Effort field ID.
- * Matches the first number-type field whose name contains "effort" or "hours".
+ * Fetch custom field definitions for a board and cache the Effort and Priority field IDs.
+ * Matches the first number-type field whose name contains "effort" or "hours",
+ * and the first list/text-type field whose name contains "priority".
  */
 async function loadCustomFieldDefs(boardId) {
   try {
     const defs = await get(`/boards/${boardId}/customFields`);
-    const field = defs.find(f => f.type === "number" && /effort|hours/i.test(f.name));
-    _cfCache.set(boardId, { effortFieldId: field?.id ?? null });
+    const effortField   = defs.find(f => f.type === "number" && /effort|hours/i.test(f.name));
+    const priorityField = defs.find(f => /priority/i.test(f.name));
+
+    // For list-type priority fields, build an idValue → normalised string map
+    let priorityOptions = null;
+    if (priorityField?.type === "list") {
+      priorityOptions = {};
+      for (const opt of priorityField.options ?? []) {
+        priorityOptions[opt.id] = opt.value?.text ?? "";
+      }
+    }
+
+    _cfCache.set(boardId, {
+      effortFieldId:    effortField?.id    ?? null,
+      priorityFieldId:  priorityField?.id  ?? null,
+      priorityFieldType: priorityField?.type ?? null,
+      priorityOptions,
+    });
   } catch {
-    _cfCache.set(boardId, { effortFieldId: null });
+    _cfCache.set(boardId, { effortFieldId: null, priorityFieldId: null, priorityFieldType: null, priorityOptions: null });
   }
 }
 
@@ -201,12 +218,38 @@ function labelsToPriority(labels) {
   return "medium";
 }
 
+/**
+ * Normalise a raw priority string to "high" | "medium" | "low" | null.
+ * Accepts values like "High", "P1", "1", "urgent", etc.
+ */
+function normalisePriority(raw) {
+  if (!raw) return null;
+  const s = String(raw).toLowerCase().trim();
+  if (/high|urgent|critical|p1|^1$/.test(s)) return "high";
+  if (/med|normal|p2|^2$/.test(s))           return "medium";
+  if (/low|minor|p3|^3$/.test(s))            return "low";
+  return null;
+}
+
+/**
+ * Extract a normalised priority string from a custom field item.
+ * Handles list, text, and number field types.
+ */
+function priorityFromItem(item, fieldType, options) {
+  if (!item) return null;
+  if (fieldType === "list")   return normalisePriority(options?.[item.idValue]);
+  if (fieldType === "text")   return normalisePriority(item.value?.text);
+  if (fieldType === "number") return normalisePriority(item.value?.number);
+  return null;
+}
+
 /** Convert a Trello card API response to the internal task shape. */
 export function cardToTask(card, boardId) {
   const meta = getSchedMeta(card.id);
 
+  const { effortFieldId, priorityFieldId, priorityFieldType, priorityOptions } = _cfCache.get(boardId) ?? {};
+
   // Read estimatedHours from the Trello "Effort" custom field if available
-  const { effortFieldId } = _cfCache.get(boardId) ?? {};
   const effortItem = effortFieldId
     ? (card.customFieldItems ?? []).find(f => f.idCustomField === effortFieldId)
     : null;
@@ -214,13 +257,20 @@ export function cardToTask(card, boardId) {
     ? parseFloat(effortItem.value.number)
     : null;
 
+  // Read priority from the Trello "Priority" custom field if available,
+  // falling back to label-colour derivation.
+  const priorityItem = priorityFieldId
+    ? (card.customFieldItems ?? []).find(f => f.idCustomField === priorityFieldId)
+    : null;
+  const priorityFromTrello = priorityFromItem(priorityItem, priorityFieldType, priorityOptions);
+
   return {
     id:                card.id,
     name:              card.name,
     notes:             card.desc             ?? "",
     projectId:         boardId,
     stageId:           card.idList,
-    priority:          meta.priority          ?? labelsToPriority(card.labels),
+    priority:          priorityFromTrello ?? meta.priority ?? labelsToPriority(card.labels),
     estimatedHours:    effortFromTrello ?? meta.estimatedHours ?? 1,
     dueDate:           card.due               ? new Date(card.due)   : null,
     startDate:         card.start             ? new Date(card.start) : null,
