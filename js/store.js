@@ -4,6 +4,7 @@
  */
 
 const state = {
+  allBoards:         [],   // lightweight list of every admin board, for settings UI
   projects:          [],
   tasks:             [],
   settings:          null,

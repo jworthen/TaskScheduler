@@ -595,6 +595,17 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 }
 .cat-name-input:focus { border-color: var(--brand); }
 
+.board-filter-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.board-filter-row {
+  display: flex; align-items: center; gap: 9px;
+  font-size: .9rem; cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: background .12s;
+}
+.board-filter-row:hover { background: var(--surface-2); }
+.board-filter-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--brand); flex-shrink: 0; }
+
 .cal-status { font-size: .88rem; margin-bottom: 10px; }
 .setup-instructions {
   margin-top: 14px;

@@ -13,7 +13,7 @@ import { loadSettings, watchSettings } from "./db.js";
 import {
   loadCredentials, isConnected,
   extractTokenFromUrl, saveCredentials,
-  getBoards, getCards,
+  getAvailableBoards, enrichBoards, getCards,
 } from "./trello.js";
 
 import { renderDashboard } from "./views/dashboard.js";
@@ -58,9 +58,20 @@ export async function loadTrelloData() {
   try {
     setState({ loading: true });
 
-    const projects = await getBoards();
+    // Cheap fetch — populates the board-selection list in Settings
+    const allBoards = await getAvailableBoards();
+    setState({ allBoards });
 
-    // Fetch cards from all boards in parallel
+    // Filter to user-selected boards (default: all)
+    const { settings } = getState();
+    const enabledIds = settings?.enabledBoardIds;
+    const toLoad = enabledIds?.length
+      ? allBoards.filter(b => enabledIds.includes(b.id))
+      : allBoards;
+
+    const projects = await enrichBoards(toLoad);
+
+    // Fetch cards from selected boards in parallel
     const cardArrays = await Promise.all(projects.map(p => getCards(p.id, p.stages.map(s => s.id))));
     const tasks = cardArrays.flat();
 

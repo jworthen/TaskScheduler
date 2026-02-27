@@ -116,22 +116,29 @@ async function loadCustomFieldDefs(boardId) {
 }
 
 /**
- * Fetch all open boards for the authenticated user,
- * enriched with their lists (stages) and custom field definitions.
+ * Lightweight fetch of all open boards the user owns.
+ * Returns id/name/url only — no stages or custom field enrichment.
+ * Used to populate the board-selection UI in Settings.
  */
-export async function getBoards() {
-  const boards = await get("/members/me/boards", {
+export async function getAvailableBoards() {
+  return get("/members/me/boards", {
     filter: "open",
     fields: "id,name,shortUrl",
     membership_type: "admin",
   });
-  const enriched = await Promise.all(
+}
+
+/**
+ * Enrich a subset of boards with their open lists (stages) and
+ * custom field definitions, ready for card fetching.
+ */
+export async function enrichBoards(boards) {
+  return Promise.all(
     boards.map(async b => {
       const [stages] = await Promise.all([getLists(b.id), loadCustomFieldDefs(b.id)]);
       return { id: b.id, name: b.name, url: b.shortUrl, stages };
     })
   );
-  return enriched;
 }
 
 // ─── Lists (Stages) ───────────────────────────────────────────────────────────

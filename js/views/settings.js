@@ -28,7 +28,9 @@ export function renderSettings() {
   const wh        = settings?.workingHours ?? {};
   const workSlots = settings?.workSlots    ?? [];
 
-  const connected = isConnected();
+  const connected   = isConnected();
+  const allBoards   = getState().allBoards ?? [];
+  const enabledIds  = settings?.enabledBoardIds ?? null;
 
   el.innerHTML = `
     <div class="view-header">
@@ -54,6 +56,22 @@ export function renderSettings() {
           <button class="btn-secondary" id="trello-refresh">🔄 Refresh boards &amp; cards</button>
           <button class="btn-ghost"     id="trello-disconnect">Disconnect</button>
         </div>
+
+        ${allBoards.length ? `
+        <div style="margin-top:1.25rem;">
+          <p class="settings-hint" style="margin-bottom:8px;">Import cards from these boards:</p>
+          <div class="board-filter-list">
+            ${allBoards.map(b => `
+              <label class="board-filter-row">
+                <input type="checkbox" class="board-enabled-chk" data-board-id="${b.id}"
+                       ${(!enabledIds || enabledIds.includes(b.id)) ? "checked" : ""} />
+                ${esc(b.name)}
+              </label>
+            `).join("")}
+          </div>
+          <button class="btn-ghost btn-sm mt-sm" id="save-board-filter">Save board selection</button>
+        </div>
+        ` : ""}
       ` : `
         <div class="form-row" style="margin-top:0.75rem;">
           <label>Trello API Key <span class="hint">— from <a href="https://trello.com/app-key" target="_blank" rel="noopener">trello.com/app-key</a></span></label>
@@ -160,6 +178,25 @@ export function renderSettings() {
         btn.textContent = "🔄 Refresh boards & cards";
       }
     });
+
+    const saveBoardFilterBtn = el.querySelector("#save-board-filter");
+    if (saveBoardFilterBtn) {
+      saveBoardFilterBtn.addEventListener("click", async () => {
+        const checked = [...el.querySelectorAll(".board-enabled-chk:checked")]
+          .map(c => c.dataset.boardId);
+        saveSettings({ enabledBoardIds: checked });
+        setState({ settings: { ...getState().settings, enabledBoardIds: checked } });
+        saveBoardFilterBtn.disabled = true;
+        saveBoardFilterBtn.textContent = "⏳ Reloading…";
+        try {
+          await loadTrelloData();
+          toast("Board selection saved!", "success");
+        } finally {
+          saveBoardFilterBtn.disabled = false;
+          saveBoardFilterBtn.textContent = "Save board selection";
+        }
+      });
+    }
 
     el.querySelector("#trello-disconnect").addEventListener("click", () => {
       if (!confirm("Disconnect Trello? This will clear your API key and token from the browser.")) return;
