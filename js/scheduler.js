@@ -37,7 +37,8 @@ export function buildAvailableSlots(from, to, workingHours, busyBlocks) {
     const dow = cursor.getDay();
     const wh  = workingHours[dow];
     if (wh) {
-      const dayStart = parseTime(cursor, wh.start);
+      const rawDayStart = parseTime(cursor, wh.start);
+      const dayStart = new Date(Math.max(rawDayStart.getTime(), from.getTime()));
       const dayEnd   = parseTime(cursor, wh.end);
 
       // Subtract busy blocks that overlap this day
