@@ -147,15 +147,18 @@ export async function getLists(boardId) {
 
 // ─── Cards (Tasks) ────────────────────────────────────────────────────────────
 
-/** Fetch open cards that have a due date and are not yet complete. */
-export async function getCards(boardId) {
+/** Fetch open cards that have a due date and are not yet complete.
+ *  openListIds filters out cards whose list has been archived (Trello's
+ *  card-level "open" filter does not exclude cards in archived lists). */
+export async function getCards(boardId, openListIds) {
   const cards = await get(`/boards/${boardId}/cards`, {
     filter: "open",
     fields: "id,name,desc,due,dueComplete,start,idList,labels,shortUrl",
     customFieldItems: "true",
   });
+  const openListSet = new Set(openListIds);
   return cards
-    .filter(c => c.due && !c.dueComplete)
+    .filter(c => c.due && !c.dueComplete && openListSet.has(c.idList))
     .map(c => cardToTask(c, boardId));
 }
 

@@ -61,7 +61,7 @@ export async function loadTrelloData() {
     const projects = await getBoards();
 
     // Fetch cards from all boards in parallel
-    const cardArrays = await Promise.all(projects.map(p => getCards(p.id)));
+    const cardArrays = await Promise.all(projects.map(p => getCards(p.id, p.stages.map(s => s.id))));
     const tasks = cardArrays.flat();
 
     setState({ projects, tasks, loading: false, trelloConnected: true });
