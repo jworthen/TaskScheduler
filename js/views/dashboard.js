@@ -40,6 +40,18 @@ export function renderDashboard() {
     return due && due < now;
   });
 
+  // Scheduled past due: scheduled start falls after the due date
+  const scheduledPastDue = tasks.filter(t => {
+    if (t.completed) return false;
+    const due   = fromTs(t.dueDate);
+    const sched = fromTs(t.scheduledStart);
+    return due && sched && sched > due;
+  }).sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
+
+  // Cannot be scheduled: scheduler explicitly flagged as unschedulable
+  const unschedulable = tasks.filter(t => !t.completed && t.schedUnschedulable)
+    .sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
+
   el.innerHTML = `
     <div class="view-header">
       <h2>Dashboard 🏠</h2>
@@ -92,6 +104,22 @@ export function renderDashboard() {
       <h3 class="section-title">🚫 Blocked</h3>
       <div class="task-list">
         ${blocked.map(t => taskRow(t)).join("")}
+      </div>
+    </section>` : ""}
+
+    ${scheduledPastDue.length ? `
+    <section class="dash-section">
+      <h3 class="section-title warn-title">⏰ Scheduled past due</h3>
+      <div class="task-list">
+        ${scheduledPastDue.map(t => taskRow(t, true)).join("")}
+      </div>
+    </section>` : ""}
+
+    ${unschedulable.length ? `
+    <section class="dash-section">
+      <h3 class="section-title danger-title">❌ Cannot be scheduled</h3>
+      <div class="task-list">
+        ${unschedulable.map(t => taskRow(t)).join("")}
       </div>
     </section>` : ""}
 

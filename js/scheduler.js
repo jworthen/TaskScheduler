@@ -127,13 +127,16 @@ export async function runScheduler() {
 
     if (placed) {
       saveSchedMeta(task.id, {
-        scheduledStart: placed.start.toISOString(),
-        scheduledEnd:   placed.end.toISOString(),
+        scheduledStart:    placed.start.toISOString(),
+        scheduledEnd:      placed.end.toISOString(),
+        schedUnschedulable: false,
       });
       occupied.push({ start: placed.start, end: placed.end });
-      updatedMeta[task.id] = { scheduledStart: placed.start, scheduledEnd: placed.end };
+      updatedMeta[task.id] = { scheduledStart: placed.start, scheduledEnd: placed.end, schedUnschedulable: false };
       scheduled.push({ task, placed });
     } else {
+      saveSchedMeta(task.id, { schedUnschedulable: true });
+      updatedMeta[task.id] = { ...updatedMeta[task.id], schedUnschedulable: true };
       warnings.push(task);
     }
   }

@@ -259,6 +259,7 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   letter-spacing: .07em;
 }
 .danger-title  { color: var(--red); }
+.warn-title    { color: #7a5100; }
 
 /* ─── Task rows ──────────────────────────────────────────── */
 .task-list { display: flex; flex-direction: column; gap: 6px; }
