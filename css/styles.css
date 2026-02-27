@@ -305,6 +305,7 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 
 .blocked-badge   { background: var(--red-light);  color: var(--red);    padding: 3px 9px; border-radius: 20px; font-size: .72rem; font-weight: 700; }
 .recurring-badge { background: var(--blue-light); color: var(--blue);   padding: 3px 9px; border-radius: 20px; font-size: .72rem; }
+.split-badge     { background: var(--brand-light); color: var(--brand-dark); padding: 3px 9px; border-radius: 20px; font-size: .72rem; font-weight: 600; }
 .done-badge      { font-size: .85rem; }
 
 /* ─── Project chips ──────────────────────────────────────── */

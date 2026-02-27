@@ -278,6 +278,9 @@ export function cardToTask(card, boardId) {
     completedAt:       null,
     scheduledStart:     meta.scheduledStart    ? new Date(meta.scheduledStart) : null,
     scheduledEnd:       meta.scheduledEnd      ? new Date(meta.scheduledEnd)   : null,
+    scheduledBlocks:    meta.scheduledBlocks
+      ? meta.scheduledBlocks.map(b => ({ start: new Date(b.start), end: new Date(b.end) }))
+      : null,
     schedUnschedulable: meta.schedUnschedulable ?? false,
     manuallyScheduled:  meta.manuallyScheduled ?? false,
     blockerIds:        meta.blockerIds        ?? [],

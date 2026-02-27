@@ -111,7 +111,7 @@ export function renderDashboard() {
     <section class="dash-section">
       <h3 class="section-title warn-title">⏰ Scheduled past due</h3>
       <div class="task-list">
-        ${scheduledPastDue.map(t => taskRow(t, true)).join("")}
+        ${scheduledPastDue.map(t => taskRow(t, true, true)).join("")}
       </div>
     </section>` : ""}
 
@@ -134,12 +134,19 @@ export function renderDashboard() {
 
 }
 
-function taskRow(task, showTime = false) {
+function taskRow(task, showTime = false, showScheduledDate = false) {
   const { projects } = getState();
   const project = projects.find(p => p.id === task.projectId);
   const stage   = project?.stages?.find(s => s.id === task.stageId);
-  const due  = fromTs(task.dueDate);
+  const due    = fromTs(task.dueDate);
   const sStart = fromTs(task.scheduledStart);
+
+  let schedMeta = "";
+  if (showScheduledDate && sStart) {
+    schedMeta = `<span class="task-time">🗓 ${formatDate(sStart)} ${formatTime(sStart)}</span>`;
+  } else if (showTime && sStart) {
+    schedMeta = `<span class="task-time">🕐 ${formatTime(sStart)}</span>`;
+  }
 
   return `
     <div class="task-row" data-task-id="${task.id}">
@@ -148,8 +155,8 @@ function taskRow(task, showTime = false) {
         ${priorityBadge(task.priority)}
       </div>
       <div class="task-row-meta">
-        ${showTime && sStart ? `<span class="task-time">🕐 ${formatTime(sStart)}</span>` : ""}
-        ${due ? `<span class="task-due ${due < new Date() ? "overdue" : ""}">📅 ${formatDate(due)}</span>` : ""}
+        ${schedMeta}
+        ${due ? `<span class="task-due ${due < new Date() ? "overdue" : ""}">📅 Due: ${formatDate(due)}</span>` : ""}
         <span class="task-hours">⏱ ${task.estimatedHours}h</span>
         ${task.blockerIds?.length ? `<span class="blocked-badge">🚫 Blocked</span>` : ""}
         ${task.recurring ? `<span class="recurring-badge">🔄</span>` : ""}

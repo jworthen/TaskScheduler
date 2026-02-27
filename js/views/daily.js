@@ -16,19 +16,32 @@ export function renderDaily() {
   const base  = new Date(); base.setHours(0,0,0,0);
   const today = addDays(base, dayOffset);
 
-  const dayTasks = tasks
-    .filter(t => {
+  // Build display entries — one per block that falls on this day.
+  // Split tasks contribute one entry per block on this day; single-block
+  // tasks contribute one entry using scheduledStart/scheduledEnd.
+  const dayEntries = [];
+  for (const t of tasks) {
+    if (t.scheduledBlocks?.length > 1) {
+      t.scheduledBlocks.forEach((b, i) => {
+        const bs = new Date(b.start);
+        if (bs.toDateString() === today.toDateString()) {
+          dayEntries.push({ task: t, start: bs, end: new Date(b.end),
+            blockIndex: i, totalBlocks: t.scheduledBlocks.length });
+        }
+      });
+    } else {
       const s = fromTs(t.scheduledStart);
-      return s && s.toDateString() === today.toDateString();
-    })
-    .sort((a, b) => {
-      const sa = fromTs(a.scheduledStart);
-      const sb = fromTs(b.scheduledStart);
-      return (sa ?? 0) - (sb ?? 0);
-    });
+      if (s && s.toDateString() === today.toDateString()) {
+        dayEntries.push({ task: t, start: s, end: fromTs(t.scheduledEnd), blockIndex: 0, totalBlocks: 1 });
+      }
+    }
+  }
+  dayEntries.sort((a, b) => a.start - b.start);
 
-  const totalHours   = dayTasks.reduce((s, t) => s + (t.estimatedHours ?? 0), 0);
-  const completedHrs = dayTasks.filter(t => t.completed).reduce((s, t) => s + (t.estimatedHours ?? 0), 0);
+  const blockHours = ({ task, start, end, totalBlocks }) =>
+    totalBlocks > 1 ? (end - start) / 3600000 : (task.estimatedHours ?? 0);
+  const totalHours   = dayEntries.reduce((s, e) => s + blockHours(e), 0);
+  const completedHrs = dayEntries.filter(e => e.task.completed).reduce((s, e) => s + blockHours(e), 0);
   const pct = totalHours > 0 ? Math.round((completedHrs / totalHours) * 100) : 0;
 
   const isToday = dayOffset === 0;
@@ -59,8 +72,8 @@ export function renderDaily() {
 
     <!-- Task timeline -->
     <div class="daily-timeline">
-      ${dayTasks.length
-        ? dayTasks.map(t => dailyTaskCard(t)).join("")
+      ${dayEntries.length
+        ? dayEntries.map(entry => dailyTaskCard(entry)).join("")
         : `<div class="empty-state">
              <div class="empty-icon">🌸</div>
              <p>No tasks scheduled for ${dateLabel}.</p>
@@ -87,11 +100,11 @@ export function renderDaily() {
   });
 }
 
-function dailyTaskCard(task) {
-  const start   = fromTs(task.scheduledStart);
-  const end     = fromTs(task.scheduledEnd);
+function dailyTaskCard({ task, start, end, blockIndex, totalBlocks }) {
   const project = getState().projects.find(p => p.id === task.projectId);
   const stage   = project?.stages?.find(s => s.id === task.stageId);
+  const isSplit = totalBlocks > 1;
+  const blockHours = isSplit && end ? ((end - start) / 3600000).toFixed(1) : null;
 
   return `
     <div class="daily-task-card ${task.completed ? "task-completed" : ""}"
@@ -108,7 +121,9 @@ function dailyTaskCard(task) {
         </div>
         <div class="daily-card-meta">
           ${priorityBadge(task.priority)}
-          <span class="task-hours">⏱ ${task.estimatedHours}h</span>
+          ${isSplit
+            ? `<span class="task-hours">⏱ ${blockHours}h</span><span class="split-badge">Part ${blockIndex + 1} of ${totalBlocks}</span>`
+            : `<span class="task-hours">⏱ ${task.estimatedHours}h</span>`}
           ${task.recurring ? `<span class="recurring-badge">🔄 Recurring</span>` : ""}
         </div>
         ${task.notes ? `<div class="daily-card-notes">${esc(task.notes)}</div>` : ""}

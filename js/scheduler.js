@@ -98,7 +98,8 @@ export async function runScheduler() {
   for (const task of tasks) {
     if (!task.dueDate) continue; // can't schedule without a due date
 
-    const due        = fromTs(task.dueDate);
+    // Ignore the time component on due dates — treat as end-of-day.
+    const due        = endOfDay(fromTs(task.dueDate));
     const neededMins = (task.estimatedHours ?? 1) * 60;
 
     // Start date is respected strictly: never schedule before it.
@@ -109,31 +110,55 @@ export async function runScheduler() {
     const rangeStart = earliest < rangeEnd ? earliest : rangeEnd;
 
     const busyNow = [...busyBlocks, ...occupied];
+    const slots   = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow);
 
-    // ── Pass 1: try to place as late as possible before the due date ──────────
-    const slots = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow);
-    let placed  = placeLatest(slots, neededMins, due);
+    // ── Pass 1: single contiguous block before due date ───────────────────────
+    let placedBlocks = null;
+    const single = placeLatest(slots, neededMins, due);
+    if (single) placedBlocks = [single];
 
-    // ── Pass 2: soft due date — find earliest slot after due date ─────────────
-    if (!placed) {
-      const extStart    = new Date(Math.max(due.getTime(), earliest.getTime()));
-      const lateSlots   = buildAvailableSlots(extStart, horizon, workingHours, busyNow);
-      const latePlaced  = placeEarliest(lateSlots, neededMins);
-      if (latePlaced) {
-        placed = latePlaced;
-        late.push(task);
-      }
+    // ── Pass 1.5: split across multiple slots before due date ─────────────────
+    if (!placedBlocks) {
+      const split = placeSplit(slots, neededMins);
+      if (split) placedBlocks = split;
     }
 
-    if (placed) {
-      saveSchedMeta(task.id, {
-        scheduledStart:    placed.start.toISOString(),
-        scheduledEnd:      placed.end.toISOString(),
+    // ── Pass 2: soft due date — earliest slot(s) after due date ───────────────
+    let isLate = false;
+    if (!placedBlocks) {
+      const extStart  = new Date(Math.max(due.getTime(), earliest.getTime()));
+      const lateSlots = buildAvailableSlots(extStart, horizon, workingHours, busyNow);
+      const lateSingle = placeEarliest(lateSlots, neededMins);
+      if (lateSingle) {
+        placedBlocks = [lateSingle];
+        isLate = true;
+      } else {
+        const lateSplit = placeSplit(lateSlots, neededMins, 30, true /* forward */);
+        if (lateSplit) { placedBlocks = lateSplit; isLate = true; }
+      }
+      if (isLate) late.push(task);
+    }
+
+    if (placedBlocks) {
+      const firstBlock = placedBlocks[0];
+      const lastBlock  = placedBlocks[placedBlocks.length - 1];
+      const metaPatch = {
+        scheduledStart:     firstBlock.start.toISOString(),
+        scheduledEnd:       lastBlock.end.toISOString(),
+        scheduledBlocks:    placedBlocks.length > 1
+          ? placedBlocks.map(b => ({ start: b.start.toISOString(), end: b.end.toISOString() }))
+          : null,
         schedUnschedulable: false,
-      });
-      occupied.push({ start: placed.start, end: placed.end });
-      updatedMeta[task.id] = { scheduledStart: placed.start, scheduledEnd: placed.end, schedUnschedulable: false };
-      scheduled.push({ task, placed });
+      };
+      saveSchedMeta(task.id, metaPatch);
+      for (const b of placedBlocks) occupied.push(b);
+      updatedMeta[task.id] = {
+        scheduledStart:     firstBlock.start,
+        scheduledEnd:       lastBlock.end,
+        scheduledBlocks:    placedBlocks.length > 1 ? placedBlocks : null,
+        schedUnschedulable: false,
+      };
+      scheduled.push({ task, placed: firstBlock });
     } else {
       saveSchedMeta(task.id, { schedUnschedulable: true });
       updatedMeta[task.id] = { ...updatedMeta[task.id], schedUnschedulable: true };
@@ -174,6 +199,43 @@ function placeLatest(slots, neededMins, due) {
     }
   }
   return null;
+}
+
+/**
+ * Split a task across multiple free intervals.
+ * forward=false (default): latest-possible, working backwards through slots.
+ * forward=true: earliest-possible, working forwards through slots.
+ * Skips any free interval shorter than minChunkMins to avoid tiny fragments.
+ * Returns chronologically-sorted [{start,end}] or null if fully unplaceable.
+ */
+function placeSplit(slots, neededMins, minChunkMins = 30, forward = false) {
+  const blocks    = [];
+  let remaining   = neededMins;
+  const slotsIter = forward ? slots : [...slots].reverse();
+
+  for (const slot of slotsIter) {
+    if (remaining <= 0) break;
+    const available  = buildFreeIntervals(slot.start, slot.end, slot.dayBusy);
+    const intervals  = forward ? available : [...available].reverse();
+
+    for (const interval of intervals) {
+      if (remaining <= 0) break;
+      const duration = (interval.end - interval.start) / 60000;
+      if (duration < minChunkMins) continue; // too small — skip
+
+      const chunkMins = Math.min(remaining, duration);
+      const start = forward
+        ? new Date(interval.start)
+        : new Date(interval.end.getTime() - chunkMins * 60000);
+      const end = forward
+        ? new Date(interval.start.getTime() + chunkMins * 60000)
+        : new Date(interval.end);
+      blocks.push({ start, end });
+      remaining -= chunkMins;
+    }
+  }
+
+  return remaining <= 0 ? blocks.sort((a, b) => a.start - b.start) : null;
 }
 
 /** Place as early as possible — used when scheduling past the due date. */
@@ -219,6 +281,12 @@ function parseTime(date, timeStr) {
 function startOfDay(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfDay(date) {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
   return d;
 }
 
