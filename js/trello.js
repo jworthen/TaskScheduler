@@ -123,6 +123,7 @@ export async function getBoards() {
   const boards = await get("/members/me/boards", {
     filter: "open",
     fields: "id,name,shortUrl",
+    membership_type: "admin",
   });
   const enriched = await Promise.all(
     boards.map(async b => {
