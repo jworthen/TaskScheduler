@@ -16,6 +16,7 @@ import {
   getAvailableBoards, enrichBoards, getCards,
 } from "./trello.js";
 
+import { runScheduler }    from "./scheduler.js";
 import { renderDashboard } from "./views/dashboard.js";
 import { renderWeekly }    from "./views/weekly.js";
 import { renderDaily }     from "./views/daily.js";
@@ -100,6 +101,24 @@ async function init() {
   document.getElementById("btn-connect-calendar")?.addEventListener("click", () => {
     switchView("settings");
     document.getElementById("connect-calendar")?.scrollIntoView({ behavior: "smooth" });
+  });
+
+  const schedulerBtn = document.getElementById("btn-run-scheduler");
+  schedulerBtn?.addEventListener("click", async () => {
+    schedulerBtn.disabled = true;
+    schedulerBtn.textContent = "⏳ Scheduling…";
+    try {
+      const { scheduled, late, warnings } = await runScheduler();
+      rerenderCurrent();
+      const lateMsg = late.length ? `, ${late.length} past due` : "";
+      const warnMsg = warnings.length ? `, ${warnings.length} unschedulable` : "";
+      toast(`Scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}${lateMsg}${warnMsg} 🗓`, "success");
+    } catch (err) {
+      toast("Scheduler error: " + err.message, "error");
+    } finally {
+      schedulerBtn.disabled = false;
+      schedulerBtn.textContent = "🗓 Run Scheduler";
+    }
   });
 
   // Handle Trello OAuth redirect — Trello appends #token=<value> to the URL

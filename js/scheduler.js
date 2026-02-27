@@ -1,12 +1,14 @@
 /**
  * scheduler.js — Scheduling logic
  *
- * Strategy: "Latest possible" placement
+ * Strategy: "Latest possible" placement with soft due-date fallback
  * For each schedulable task (sorted by priority then due date):
- *   - Walk backward from the due date
- *   - Find the latest contiguous window of available time that fits
- *     estimatedHours, respecting working hours and calendar busy blocks
- *   - If no window found before today → mark as "cannot schedule" warning
+ *   1. Respect start date strictly — never schedule before task.startDate.
+ *   2. Try to place the task as late as possible before its due date.
+ *   3. If there is not enough capacity before the due date, find the earliest
+ *      available slot AFTER the due date (up to the 60-day horizon) and
+ *      schedule there — the task is marked "late" but still gets a slot.
+ *   4. Only warn (unschedulable) if truly no slot exists anywhere.
  *
  * Scheduling metadata is persisted via saveSchedMeta (localStorage) since
  * tasks live in Trello rather than Firestore.
@@ -86,7 +88,8 @@ export async function runScheduler() {
   const occupied = []; // { start: Date, end: Date }
 
   const scheduled = [];
-  const warnings  = [];
+  const late      = []; // scheduled, but past due date
+  const warnings  = []; // truly could not be placed anywhere
 
   // Track updated tasks to batch into a single setState call
   const updatedMeta = {}; // taskId → { scheduledStart, scheduledEnd }
@@ -96,17 +99,31 @@ export async function runScheduler() {
 
     const due        = fromTs(task.dueDate);
     const neededMins = (task.estimatedHours ?? 1) * 60;
-    const earliest   = task.startDate && task.startDate > now ? task.startDate : now;
-    const rangeEnd   = due      < horizon ? due      : horizon;
+
+    // Start date is respected strictly: never schedule before it.
+    const earliest   = task.startDate ? new Date(Math.max(task.startDate.getTime(), now.getTime()))
+                                       : now;
+
+    const rangeEnd   = due < horizon ? due : horizon;
     const rangeStart = earliest < rangeEnd ? earliest : rangeEnd;
 
-    const slots = buildAvailableSlots(rangeStart, rangeEnd, workingHours, [
-      ...busyBlocks,
-      ...occupied,
-    ]);
+    const busyNow = [...busyBlocks, ...occupied];
 
-    // Walk backward: latest slot first
-    const placed = placeLatest(slots, neededMins, due);
+    // ── Pass 1: try to place as late as possible before the due date ──────────
+    const slots = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow);
+    let placed  = placeLatest(slots, neededMins, due);
+
+    // ── Pass 2: soft due date — find earliest slot after due date ─────────────
+    if (!placed) {
+      const extStart    = new Date(Math.max(due.getTime(), earliest.getTime()));
+      const lateSlots   = buildAvailableSlots(extStart, horizon, workingHours, busyNow);
+      const latePlaced  = placeEarliest(lateSlots, neededMins);
+      if (latePlaced) {
+        placed = latePlaced;
+        late.push(task);
+      }
+    }
+
     if (placed) {
       saveSchedMeta(task.id, {
         scheduledStart: placed.start.toISOString(),
@@ -128,7 +145,7 @@ export async function runScheduler() {
     setState({ tasks: updated });
   }
 
-  return { scheduled, warnings };
+  return { scheduled, late, warnings };
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -149,6 +166,22 @@ function placeLatest(slots, neededMins, due) {
         if (start >= interval.start) {
           return { start, end };
         }
+      }
+    }
+  }
+  return null;
+}
+
+/** Place as early as possible — used when scheduling past the due date. */
+function placeEarliest(slots, neededMins) {
+  for (const slot of slots) {
+    const available = buildFreeIntervals(slot.start, slot.end, slot.dayBusy);
+    for (const interval of available) {
+      const duration = (interval.end - interval.start) / 60000;
+      if (duration >= neededMins) {
+        const start = interval.start;
+        const end   = new Date(start.getTime() + neededMins * 60000);
+        if (end <= interval.end) return { start, end };
       }
     }
   }

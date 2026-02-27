@@ -265,11 +265,12 @@ export function renderSettings() {
     btn.disabled = true;
     btn.textContent = "⏳ Scheduling…";
     try {
-      const { scheduled, warnings } = await runScheduler();
+      const { scheduled, late, warnings } = await runScheduler();
       resultDiv.classList.remove("hidden");
       resultDiv.innerHTML = `
         <p>✅ Scheduled <strong>${scheduled.length}</strong> task${scheduled.length !== 1 ? "s" : ""}.</p>
-        ${warnings.length ? `<p class="warn-text">⚠️ <strong>${warnings.length}</strong> task${warnings.length !== 1 ? "s" : ""} could not be scheduled before their deadline: ${warnings.map(t => esc(t.name)).join(", ")}</p>` : ""}
+        ${late.length ? `<p class="warn-text">⚠️ <strong>${late.length}</strong> task${late.length !== 1 ? "s" : ""} scheduled past their due date: ${late.map(t => esc(t.name)).join(", ")}</p>` : ""}
+        ${warnings.length ? `<p class="warn-text">⛔ <strong>${warnings.length}</strong> task${warnings.length !== 1 ? "s" : ""} could not be scheduled: ${warnings.map(t => esc(t.name)).join(", ")}</p>` : ""}
       `;
       toast(`Scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}! 🗓`, "success");
       rerenderCurrent();
