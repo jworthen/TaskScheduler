@@ -21,12 +21,14 @@ export function renderDashboard() {
     })
     .sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
 
-  const todayTasks = tasks.filter(t => {
-    if (t.completed) return false;
-    const s = fromTs(t.scheduledStart);
-    if (!s) return false;
-    return s.toDateString() === now.toDateString();
-  });
+  const todayTasks = tasks
+    .filter(t => {
+      if (t.completed) return false;
+      const s = fromTs(t.scheduledStart);
+      if (!s) return false;
+      return s.toDateString() === now.toDateString();
+    })
+    .sort((a, b) => fromTs(a.scheduledStart) - fromTs(b.scheduledStart));
 
   const hoursToday = todayTasks.reduce((sum, t) => sum + (t.estimatedHours ?? 0), 0);
   const blocked    = getBlockedTasks();
@@ -72,17 +74,17 @@ export function renderDashboard() {
     </section>` : ""}
 
     <section class="dash-section">
-      <h3 class="section-title">📅 Due this week</h3>
-      ${dueSoon.length
-        ? `<div class="task-list">${dueSoon.map(t => taskRow(t)).join("")}</div>`
-        : `<p class="empty-state">Nothing due in the next 7 days 🎉</p>`}
-    </section>
-
-    <section class="dash-section">
       <h3 class="section-title">☀️ Today's schedule</h3>
       ${todayTasks.length
         ? `<div class="task-list">${todayTasks.map(t => taskRow(t, true)).join("")}</div>`
         : `<p class="empty-state">No tasks scheduled for today</p>`}
+    </section>
+
+    <section class="dash-section">
+      <h3 class="section-title">📅 Due this week</h3>
+      ${dueSoon.length
+        ? `<div class="task-list">${dueSoon.map(t => taskRow(t)).join("")}</div>`
+        : `<p class="empty-state">Nothing due in the next 7 days 🎉</p>`}
     </section>
 
     ${blocked.length ? `

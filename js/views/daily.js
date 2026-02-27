@@ -88,8 +88,10 @@ export function renderDaily() {
 }
 
 function dailyTaskCard(task) {
-  const start  = fromTs(task.scheduledStart);
-  const end    = fromTs(task.scheduledEnd);
+  const start   = fromTs(task.scheduledStart);
+  const end     = fromTs(task.scheduledEnd);
+  const project = getState().projects.find(p => p.id === task.projectId);
+  const stage   = project?.stages?.find(s => s.id === task.stageId);
 
   return `
     <div class="daily-task-card ${task.completed ? "task-completed" : ""}"
@@ -101,7 +103,7 @@ function dailyTaskCard(task) {
       </div>
       <div class="daily-card-body">
         <div class="daily-card-header">
-          <span class="task-name ${task.completed ? "strikethrough" : ""}">${esc(task.name)}</span>
+          <span class="task-name ${task.completed ? "strikethrough" : ""}">${esc(task.name)}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}</span>
           <span class="complete-indicator">${task.completed ? "✅" : "⬜"}</span>
         </div>
         <div class="daily-card-meta">
