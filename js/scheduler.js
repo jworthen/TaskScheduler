@@ -22,36 +22,43 @@ const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
 /**
  * Build a list of available time slots for a given date range.
- * @param {Date} from
- * @param {Date} to
- * @param {object} workingHours  — { 0: null | {start,end}, 1: ..., ... }
- * @param {Array}  busyBlocks    — [{ start: Date, end: Date }, ...]
- * @returns {Array<{start:Date, end:Date, freeMinutes:number}>} one entry per day
+ * When workSlots are configured they take precedence over workingHours so that
+ * the scheduler uses the exact same time windows shown in the weekly view
+ * (including lunch gaps, evening blocks, etc.).  One slot entry is created per
+ * (day × workSlot interval); falls back to one entry per (day × workingHours)
+ * when workSlots is empty.
+ * @param {Date}   from
+ * @param {Date}   to
+ * @param {object} workingHours — { 0: null | {start,end}, 1: ..., ... }
+ * @param {Array}  busyBlocks   — [{ start: Date, end: Date }, ...]
+ * @param {Array}  workSlots    — settings.workSlots (may be empty)
+ * @returns {Array<{start:Date, end:Date, freeMinutes:number, dayBusy:Array}>}
  */
-export function buildAvailableSlots(from, to, workingHours, busyBlocks) {
-  const slots = [];
+export function buildAvailableSlots(from, to, workingHours, busyBlocks, workSlots = []) {
+  const slots  = [];
   const cursor = startOfDay(from);
   const end    = startOfDay(to);
 
   while (cursor <= end) {
-    const dow = cursor.getDay();
-    const wh  = workingHours[dow];
-    if (wh) {
-      const rawDayStart = parseTime(cursor, wh.start);
-      const dayStart = new Date(Math.max(rawDayStart.getTime(), from.getTime()));
-      const dayEnd   = parseTime(cursor, wh.end);
+    const dayIntervals = getDayIntervals(cursor, workSlots, workingHours);
 
-      // Subtract busy blocks that overlap this day
-      const dayBusy = busyBlocks.filter(b =>
-        b.start < dayEnd && b.end > dayStart
-      ).map(b => ({
-        start: b.start < dayStart ? dayStart : b.start,
-        end:   b.end   > dayEnd   ? dayEnd   : b.end,
-      }));
+    for (const iv of dayIntervals) {
+      // Never schedule before `from` (e.g. don't place in the past)
+      const dayStart = new Date(Math.max(iv.start.getTime(), from.getTime()));
+      const dayEnd   = iv.end;
+      if (dayStart >= dayEnd) continue; // fully clipped out
+
+      const dayBusy = busyBlocks
+        .filter(b => b.start < dayEnd && b.end > dayStart)
+        .map(b => ({
+          start: b.start < dayStart ? dayStart : b.start,
+          end:   b.end   > dayEnd   ? dayEnd   : b.end,
+        }));
 
       const freeMinutes = freeTimeInDay(dayStart, dayEnd, dayBusy);
       slots.push({ date: new Date(cursor), start: dayStart, end: dayEnd, dayBusy, freeMinutes });
     }
+
     cursor.setDate(cursor.getDate() + 1);
   }
   return slots;
@@ -65,6 +72,7 @@ export function buildAvailableSlots(from, to, workingHours, busyBlocks) {
 export async function runScheduler() {
   const { settings, calendarEvents, tasks: allTasks } = getState();
   const workingHours = settings?.workingHours ?? defaultWorkingHours();
+  const workSlots    = settings?.workSlots    ?? [];
   const busyBlocks   = calendarEvents.map(e => ({
     start: new Date(e.start),
     end:   new Date(e.end),
@@ -110,7 +118,7 @@ export async function runScheduler() {
     const rangeStart = earliest < rangeEnd ? earliest : rangeEnd;
 
     const busyNow = [...busyBlocks, ...occupied];
-    const slots   = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow);
+    const slots   = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow, workSlots);
 
     // ── Pass 1: single contiguous block before due date ───────────────────────
     let placedBlocks = null;
@@ -127,7 +135,7 @@ export async function runScheduler() {
     let isLate = false;
     if (!placedBlocks) {
       const extStart  = new Date(Math.max(due.getTime(), earliest.getTime()));
-      const lateSlots = buildAvailableSlots(extStart, horizon, workingHours, busyNow);
+      const lateSlots = buildAvailableSlots(extStart, horizon, workingHours, busyNow, workSlots);
       const lateSingle = placeEarliest(lateSlots, neededMins);
       if (lateSingle) {
         placedBlocks = [lateSingle];
@@ -252,6 +260,31 @@ function placeEarliest(slots, neededMins) {
     }
   }
   return null;
+}
+
+/**
+ * Return the schedulable intervals for a single calendar day.
+ * Prefers workSlots (the blocks the user defined in the weekly view) so the
+ * scheduler stays in sync with what is shown on screen.  Falls back to the
+ * simple per-day start/end from workingHours when workSlots is empty.
+ */
+function getDayIntervals(date, workSlots, workingHours) {
+  const dow = date.getDay();
+
+  if (workSlots?.length) {
+    return workSlots
+      .filter(ws => ws.days?.includes(dow))
+      .map(ws => ({
+        start: parseTime(date, ws.startTime),
+        end:   parseTime(date, ws.endTime),
+      }))
+      .filter(iv => iv.start < iv.end)
+      .sort((a, b) => a.start - b.start);
+  }
+
+  const wh = workingHours[dow];
+  if (!wh) return [];
+  return [{ start: parseTime(date, wh.start), end: parseTime(date, wh.end) }];
 }
 
 function buildFreeIntervals(dayStart, dayEnd, busyBlocks) {
