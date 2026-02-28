@@ -40,12 +40,17 @@ export function renderDashboard() {
     return due && due < now;
   });
 
-  // Scheduled past due: scheduled start falls after the due date
+  // Scheduled past due: scheduled start falls on a day strictly after the due date.
+  // Day-level comparison avoids false positives when a task is scheduled later in the
+  // day it is due (dueDate from Trello is typically midnight UTC of the due day).
   const scheduledPastDue = tasks.filter(t => {
     if (t.completed) return false;
     const due   = fromTs(t.dueDate);
     const sched = fromTs(t.scheduledStart);
-    return due && sched && sched > due;
+    if (!due || !sched) return false;
+    const dueDay   = new Date(due);   dueDay.setHours(0, 0, 0, 0);
+    const schedDay = new Date(sched); schedDay.setHours(0, 0, 0, 0);
+    return schedDay > dueDay;
   }).sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
 
   // Cannot be scheduled: scheduler explicitly flagged as unschedulable
