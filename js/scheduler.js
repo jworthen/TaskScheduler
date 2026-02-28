@@ -16,7 +16,7 @@
 
 import { fromTs } from "./db.js";
 import { saveSchedMeta } from "./trello.js";
-import { getState, getSchedulableTasks, setState } from "./store.js";
+import { getState, setState } from "./store.js";
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
@@ -65,6 +65,43 @@ export function buildAvailableSlots(from, to, workingHours, busyBlocks, workSlot
 }
 
 /**
+ * Topologically sort tasks so that every blocker appears before the tasks
+ * that depend on it. Within the same dependency level, tasks are ordered by
+ * priority then due date. Cycles are broken by skipping the back-edge.
+ */
+function topoSort(tasks) {
+  const taskMap = new Map(tasks.map(t => [t.id, t]));
+  const visited = new Set();
+  const inStack = new Set(); // cycle detection
+  const result  = [];
+
+  function visit(task) {
+    if (visited.has(task.id)) return;
+    if (inStack.has(task.id)) return; // back-edge — skip to break cycle
+    inStack.add(task.id);
+    for (const blockerId of task.blockerIds ?? []) {
+      const blocker = taskMap.get(blockerId);
+      if (blocker) visit(blocker);
+    }
+    inStack.delete(task.id);
+    visited.add(task.id);
+    result.push(task);
+  }
+
+  // Seed in priority + due-date order so tiebreaking is stable and meaningful
+  const seeded = [...tasks].sort((a, b) => {
+    const pa = PRIORITY_ORDER[a.priority] ?? 1;
+    const pb = PRIORITY_ORDER[b.priority] ?? 1;
+    if (pa !== pb) return pa - pb;
+    const da = fromTs(a.dueDate) ?? new Date(9999, 0);
+    const db = fromTs(b.dueDate) ?? new Date(9999, 0);
+    return da - db;
+  });
+  for (const task of seeded) visit(task);
+  return result;
+}
+
+/**
  * Schedule all unscheduled schedulable tasks.
  * Persists scheduling metadata to localStorage via saveSchedMeta.
  * Returns { scheduled: [...], warnings: [...] }
@@ -78,16 +115,12 @@ export async function runScheduler() {
     end:   new Date(e.end),
   }));
 
-  const tasks = getSchedulableTasks().filter(t => !t.manuallyScheduled);
-  // Sort: priority first, then earliest due date
-  tasks.sort((a, b) => {
-    const pa = PRIORITY_ORDER[a.priority] ?? 1;
-    const pb = PRIORITY_ORDER[b.priority] ?? 1;
-    if (pa !== pb) return pa - pb;
-    const da = fromTs(a.dueDate) ?? new Date(9999, 0);
-    const db_ = fromTs(b.dueDate) ?? new Date(9999, 0);
-    return da - db_;
-  });
+  // Include all incomplete, non-manually-scheduled tasks — even those with unfinished
+  // blockers. Topological ordering ensures a blocker is always scheduled before the
+  // tasks that depend on it, and the earliest-start logic below enforces that a
+  // dependent task cannot begin before its blocker's scheduled end time.
+  const incomplete = allTasks.filter(t => !t.completed && !t.manuallyScheduled);
+  const tasks = topoSort(incomplete);
 
   const now     = new Date();
   const horizon = new Date(now);
@@ -110,9 +143,17 @@ export async function runScheduler() {
     const due        = endOfDay(fromTs(task.dueDate));
     const neededMins = (task.estimatedHours ?? 1) * 60;
 
-    // Start date is respected strictly: never schedule before it.
-    const earliest   = task.startDate ? new Date(Math.max(task.startDate.getTime(), now.getTime()))
-                                       : now;
+    // Earliest start = max(now, task.startDate, scheduled end of every unfinished blocker).
+    // Because tasks are processed in topological order, any blocker in our task list will
+    // already have an entry in updatedMeta by the time we reach this task.
+    let earliestMs = task.startDate
+      ? Math.max(task.startDate.getTime(), now.getTime())
+      : now.getTime();
+    for (const blockerId of task.blockerIds ?? []) {
+      const blockerEnd = updatedMeta[blockerId]?.scheduledEnd;
+      if (blockerEnd) earliestMs = Math.max(earliestMs, blockerEnd.getTime());
+    }
+    const earliest = new Date(earliestMs);
 
     const rangeEnd   = due < horizon ? due : horizon;
     const rangeStart = earliest < rangeEnd ? earliest : rangeEnd;

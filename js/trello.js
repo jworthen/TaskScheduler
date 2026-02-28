@@ -111,6 +111,7 @@ async function loadCustomFieldDefs(boardId) {
     const defs = await get(`/boards/${boardId}/customFields`);
     const effortField   = defs.find(f => f.type === "number" && /effort|hours/i.test(f.name));
     const priorityField = defs.find(f => /priority/i.test(f.name));
+    const blockedByField = defs.find(f => f.type === "text" && /blocked.?by|blocker/i.test(f.name));
 
     // For list-type priority fields, build an idValue → normalised string map
     let priorityOptions = null;
@@ -126,9 +127,10 @@ async function loadCustomFieldDefs(boardId) {
       priorityFieldId:  priorityField?.id  ?? null,
       priorityFieldType: priorityField?.type ?? null,
       priorityOptions,
+      blockedByFieldId: blockedByField?.id ?? null,
     });
   } catch {
-    _cfCache.set(boardId, { effortFieldId: null, priorityFieldId: null, priorityFieldType: null, priorityOptions: null });
+    _cfCache.set(boardId, { effortFieldId: null, priorityFieldId: null, priorityFieldType: null, priorityOptions: null, blockedByFieldId: null });
   }
 }
 
@@ -182,9 +184,17 @@ export async function getCards(boardId, openListIds) {
     customFieldItems: "true",
   });
   const openListSet = new Set(openListIds);
-  return cards
-    .filter(c => c.due && !c.dueComplete && openListSet.has(c.idList))
-    .map(c => cardToTask(c, boardId));
+  const relevant = cards.filter(c => c.due && !c.dueComplete && openListSet.has(c.idList));
+
+  // Build shortLink → cardId map so "Blocked By" field values can be resolved.
+  // The shortUrl looks like "https://trello.com/c/Abc12345"; we extract "Abc12345".
+  const shortLinkMap = {};
+  for (const c of relevant) {
+    const link = c.shortUrl?.split("/c/")[1];
+    if (link) shortLinkMap[link] = c.id;
+  }
+
+  return relevant.map(c => cardToTask(c, boardId, shortLinkMap));
 }
 
 // ─── Scheduling metadata ──────────────────────────────────────────────────────
@@ -244,10 +254,10 @@ function priorityFromItem(item, fieldType, options) {
 }
 
 /** Convert a Trello card API response to the internal task shape. */
-export function cardToTask(card, boardId) {
+export function cardToTask(card, boardId, shortLinkMap = {}) {
   const meta = getSchedMeta(card.id);
 
-  const { effortFieldId, priorityFieldId, priorityFieldType, priorityOptions } = _cfCache.get(boardId) ?? {};
+  const { effortFieldId, priorityFieldId, priorityFieldType, priorityOptions, blockedByFieldId } = _cfCache.get(boardId) ?? {};
 
   // Read estimatedHours from the Trello "Effort" custom field if available
   const effortItem = effortFieldId
@@ -263,6 +273,23 @@ export function cardToTask(card, boardId) {
     ? (card.customFieldItems ?? []).find(f => f.idCustomField === priorityFieldId)
     : null;
   const priorityFromTrello = priorityFromItem(priorityItem, priorityFieldType, priorityOptions);
+
+  // Read blocker short links from the Trello "Blocked By" custom field (text type).
+  // Expected format: comma- or space-separated card short links, e.g. "Abc12345, Xyz67890".
+  // Short links are the 8-char IDs from card URLs (https://trello.com/c/<shortLink>).
+  // If the field item is present we use it (may resolve to [] if none match); otherwise
+  // fall back to blockerIds saved in localStorage via the task-form UI.
+  const blockedByItem = blockedByFieldId
+    ? (card.customFieldItems ?? []).find(f => f.idCustomField === blockedByFieldId)
+    : null;
+  const blockerIdsFromTrello = blockedByItem != null
+    ? (blockedByItem.value?.text ?? "")
+        .split(/[\s,]+/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .map(link => shortLinkMap[link] ?? null)
+        .filter(Boolean)
+    : null;
 
   return {
     id:                card.id,
@@ -283,7 +310,7 @@ export function cardToTask(card, boardId) {
       : null,
     schedUnschedulable: meta.schedUnschedulable ?? false,
     manuallyScheduled:  meta.manuallyScheduled ?? false,
-    blockerIds:        meta.blockerIds        ?? [],
+    blockerIds:        blockerIdsFromTrello ?? meta.blockerIds ?? [],
     recurring:         false,
     trelloUrl:         card.shortUrl,
     labels:            card.labels            ?? [],
