@@ -16,6 +16,7 @@ import { runScheduler } from "../scheduler.js";
 import { toast } from "../ui-utils.js";
 import {
   isConnected, getApiKey, startOAuth, clearCredentials, loadCredentials,
+  clearAllBlockerIds,
 } from "../trello.js";
 import { loadTrelloData, rerenderCurrent } from "../main.js";
 
@@ -132,7 +133,14 @@ export function renderSettings() {
     <section class="settings-section">
       <h3>Auto-Scheduler</h3>
       <p class="settings-hint">Automatically place unscheduled Trello cards in the latest available slot before their due date.</p>
-      <button class="btn-primary" id="run-scheduler">🗓 Run auto-scheduler</button>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button class="btn-primary" id="run-scheduler">🗓 Run auto-scheduler</button>
+        <button class="btn-ghost"   id="reset-blockers">🔗 Reset blocker data</button>
+      </div>
+      <p class="settings-hint" style="margin-top:0.5rem;">
+        "Reset blocker data" clears any locally-saved blocker relationships and re-imports them fresh from Trello.
+        Use this if cards are showing stale or incorrect blockers.
+      </p>
       <div id="scheduler-result" class="scheduler-result hidden"></div>
     </section>
 
@@ -279,6 +287,23 @@ export function renderSettings() {
     } finally {
       btn.disabled = false;
       btn.textContent = "🗓 Run auto-scheduler";
+    }
+  });
+
+  el.querySelector("#reset-blockers").addEventListener("click", async () => {
+    if (!confirm("Clear all locally-saved blocker data and re-import from Trello?")) return;
+    const btn = el.querySelector("#reset-blockers");
+    btn.disabled = true;
+    btn.textContent = "⏳ Resetting…";
+    try {
+      clearAllBlockerIds();
+      await loadTrelloData();
+      toast("Blocker data reset and re-imported from Trello. 🔗", "success");
+    } catch (err) {
+      toast("Reset failed: " + err.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "🔗 Reset blocker data";
     }
   });
 

@@ -218,6 +218,29 @@ export function clearSchedMeta(cardId) {
   localStorage.removeItem(SCHED_NS + cardId);
 }
 
+/**
+ * Strip the `blockerIds` field from every ts_sched_* localStorage entry,
+ * leaving all other scheduling metadata (hours, schedule, etc.) intact.
+ * Call this before a Trello re-import to ensure Trello is the sole source
+ * of truth for blocker relationships.
+ */
+export function clearAllBlockerIds() {
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(SCHED_NS)) keys.push(key);
+  }
+  for (const key of keys) {
+    try {
+      const meta = JSON.parse(localStorage.getItem(key) ?? "{}");
+      if ("blockerIds" in meta) {
+        delete meta.blockerIds;
+        localStorage.setItem(key, JSON.stringify(meta));
+      }
+    } catch { /* ignore malformed entries */ }
+  }
+}
+
 // ─── Data converters ──────────────────────────────────────────────────────────
 
 function labelsToPriority(labels) {
@@ -277,13 +300,14 @@ export function cardToTask(card, boardId, shortLinkMap = {}) {
   // Read blocker short links from the Trello "Blocked By" custom field (text type).
   // Expected format: comma- or space-separated card short links, e.g. "Abc12345, Xyz67890".
   // Short links are the 8-char IDs from card URLs (https://trello.com/c/<shortLink>).
-  // If the field item is present we use it (may resolve to [] if none match); otherwise
-  // fall back to blockerIds saved in localStorage via the task-form UI.
+  // When the board has a "Blocked By" field defined, Trello is always authoritative
+  // (cards with no value set resolve to []). Only fall back to localStorage when the
+  // board has no such custom field at all.
   const blockedByItem = blockedByFieldId
     ? (card.customFieldItems ?? []).find(f => f.idCustomField === blockedByFieldId)
     : null;
-  const blockerIdsFromTrello = blockedByItem != null
-    ? (blockedByItem.value?.text ?? "")
+  const blockerIdsFromTrello = blockedByFieldId != null
+    ? (blockedByItem?.value?.text ?? "")
         .split(/[\s,]+/)
         .map(s => s.trim())
         .filter(Boolean)
