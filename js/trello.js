@@ -308,7 +308,8 @@ export function cardToTask(card, boardId, shortLinkMap = {}) {
     scheduledBlocks:    meta.scheduledBlocks
       ? meta.scheduledBlocks.map(b => ({ start: new Date(b.start), end: new Date(b.end) }))
       : null,
-    schedUnschedulable: meta.schedUnschedulable ?? false,
+    schedUnschedulable:       meta.schedUnschedulable       ?? false,
+    schedUnschedulableReason: meta.schedUnschedulableReason ?? null,
     manuallyScheduled:  meta.manuallyScheduled ?? false,
     blockerIds:        blockerIdsFromTrello ?? meta.blockerIds ?? [],
     recurring:         false,

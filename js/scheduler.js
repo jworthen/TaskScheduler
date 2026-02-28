@@ -209,8 +209,20 @@ export async function runScheduler() {
       };
       scheduled.push({ task, placed: firstBlock });
     } else {
-      saveSchedMeta(task.id, { schedUnschedulable: true });
-      updatedMeta[task.id] = { ...updatedMeta[task.id], schedUnschedulable: true };
+      // Diagnose why placement failed so the UI can surface a useful hint.
+      let schedUnschedulableReason;
+      if (earliest > horizon) {
+        // A blocker's scheduled end pushed the earliest start past the 60-day window.
+        schedUnschedulableReason = "blocker_beyond_horizon";
+      } else if ((task.blockerIds ?? []).some(bid => updatedMeta[bid]?.schedUnschedulable)) {
+        // At least one blocker couldn't be placed, so this task can't be either.
+        schedUnschedulableReason = "blocker_unschedulable";
+      } else {
+        // Simply not enough free working time in the 60-day window.
+        schedUnschedulableReason = "no_capacity";
+      }
+      saveSchedMeta(task.id, { schedUnschedulable: true, schedUnschedulableReason });
+      updatedMeta[task.id] = { ...updatedMeta[task.id], schedUnschedulable: true, schedUnschedulableReason };
       warnings.push(task);
     }
   }
