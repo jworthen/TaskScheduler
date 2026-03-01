@@ -33,20 +33,25 @@
  *    - Authorized JavaScript origins: http://localhost:PORT (e.g. http://localhost:5500)
  *      (add your real domain here when deployed)
  *    - Copy the Client ID into GOOGLE_CALENDAR_CLIENT_ID below.
+ *
+ * SETUP STEPS
+ * ===========
+ * Copy this file to firebase-config.js and fill in your values:
+ *   cp js/firebase-config.example.js js/firebase-config.js
  */
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyCxshdeSMZGd4aGAEkpcEtm3iRzOIaAZuw",
-  authDomain: "taskscheduler-7456c.firebaseapp.com",
-  projectId: "taskscheduler-7456c",
-  storageBucket: "taskscheduler-7456c.firebasestorage.app",
-  messagingSenderId: "990441124707",
-  appId: "1:990441124707:web:eb0a98a10a4f0bb04e5956",
-  measurementId: "G-HBLB73Y5WB"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.firebasestorage.app",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId:             "YOUR_APP_ID",
+  measurementId:     "YOUR_MEASUREMENT_ID",   // optional
 };
 
 /** OAuth Client ID for Google Calendar (read-only) */
-export const GOOGLE_CALENDAR_CLIENT_ID = "967095672764-l18ou1jc6efr6vc0n16tv57ucbitdhkk.apps.googleusercontent.com";
+export const GOOGLE_CALENDAR_CLIENT_ID = "YOUR_GOOGLE_CALENDAR_CLIENT_ID.apps.googleusercontent.com";
 
 /** Set to true once you have filled in the values above */
-export const FIREBASE_CONFIGURED = true;
+export const FIREBASE_CONFIGURED = false;
