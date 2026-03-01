@@ -2,9 +2,10 @@
  * views/weekly.js — 7-day calendar grid with drag-and-drop rescheduling
  */
 
-import { getState } from "../store.js";
-import { fromTs, updateTask } from "../db.js";
+import { getState, setState } from "../store.js";
+import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
+import { saveSchedMeta } from "../trello.js";
 import { toast, startOfWeek, addDays, isSameDay, formatTime } from "../ui-utils.js";
 
 const HOUR_START = 7;   // 7 AM
@@ -37,7 +38,6 @@ export function renderWeekly() {
         <span class="wk-range">${formatDateShort(weekStart)} – ${formatDateShort(days[6])}</span>
         <button class="btn-ghost" id="wk-next">Next →</button>
         <button class="btn-ghost" id="wk-today">Today</button>
-        <button class="btn-primary" id="wk-new-task">+ Task</button>
       </div>
     </div>
 
@@ -86,7 +86,6 @@ export function renderWeekly() {
   el.querySelector("#wk-prev").addEventListener("click", () => { weekOffset--; renderWeekly(); });
   el.querySelector("#wk-next").addEventListener("click", () => { weekOffset++; renderWeekly(); });
   el.querySelector("#wk-today").addEventListener("click", () => { weekOffset = 0; renderWeekly(); });
-  el.querySelector("#wk-new-task").addEventListener("click", () => openTaskForm());
 
   // Task click → edit
   el.querySelectorAll(".week-task-block").forEach(block => {
@@ -268,16 +267,19 @@ function initDragDrop(container) {
       newStart.setHours(Math.min(h, HOUR_END - 1), m, 0, 0);
       const newEnd = new Date(newStart.getTime() + (task.estimatedHours ?? 1) * 3600000);
 
-      try {
-        await updateTask(task.id, {
-          scheduledStart:    newStart,
-          scheduledEnd:      newEnd,
-          manuallyScheduled: true,
-        });
-        toast("Task rescheduled! 📅", "success");
-      } catch (err) {
-        toast("Could not reschedule: " + err.message, "error");
-      }
+      saveSchedMeta(task.id, {
+        scheduledStart:    newStart.toISOString(),
+        scheduledEnd:      newEnd.toISOString(),
+        manuallyScheduled: true,
+      });
+      // Update store and re-render
+      const { tasks } = getState();
+      setState({ tasks: tasks.map(t => t.id === task.id
+        ? { ...t, scheduledStart: newStart, scheduledEnd: newEnd, manuallyScheduled: true }
+        : t)
+      });
+      toast("Task rescheduled! 📅", "success");
+      renderWeekly();
     });
   });
 
@@ -297,16 +299,19 @@ function initDragDrop(container) {
       dropZone.classList.remove("unschedule-zone-hover", "unschedule-zone-active");
       if (!dragTaskId || !dragIsScheduled) return;
 
-      try {
-        await updateTask(dragTaskId, {
-          scheduledStart:    null,
-          scheduledEnd:      null,
-          manuallyScheduled: false,
-        });
-        toast("Task removed from calendar.", "info");
-      } catch (err) {
-        toast("Could not unschedule: " + err.message, "error");
-      }
+      saveSchedMeta(dragTaskId, {
+        scheduledStart:    null,
+        scheduledEnd:      null,
+        manuallyScheduled: false,
+      });
+      // Update store and re-render
+      const { tasks } = getState();
+      setState({ tasks: tasks.map(t => t.id === dragTaskId
+        ? { ...t, scheduledStart: null, scheduledEnd: null, manuallyScheduled: false }
+        : t)
+      });
+      toast("Task removed from calendar.", "info");
+      renderWeekly();
     });
   }
 }

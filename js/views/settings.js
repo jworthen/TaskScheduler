@@ -1,9 +1,12 @@
 /**
  * views/settings.js — Settings panel
- * - Working hours per day of week
- * - Category management (add / rename / delete / recolor)
- * - Google Calendar OAuth setup
- * - Run auto-scheduler button
+ *
+ * Sections:
+ *   1. Trello connection (API key + OAuth token)
+ *   2. Working hours per day of week
+ *   3. Time slot types (work bands on calendar)
+ *   4. Auto-scheduler
+ *   5. Google Calendar (optional busy-block integration)
  */
 
 import { getState, setState } from "../store.js";
@@ -11,6 +14,11 @@ import { saveSettings } from "../db.js";
 import { connectCalendar, isCalendarConnected } from "../calendar.js";
 import { runScheduler } from "../scheduler.js";
 import { toast } from "../ui-utils.js";
+import {
+  isConnected, getApiKey, startOAuth, clearCredentials, loadCredentials,
+  clearAllBlockerIds,
+} from "../trello.js";
+import { loadTrelloData, rerenderCurrent } from "../main.js";
 
 const DAY_NAMES  = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const DAY_ABBREV = ["Su","Mo","Tu","We","Th","Fr","Sa"];
@@ -18,13 +26,72 @@ const DAY_ABBREV = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 export function renderSettings() {
   const el = document.getElementById("view-settings");
   const { settings } = getState();
-  const wh         = settings?.workingHours ?? {};
-  const workSlots  = settings?.workSlots    ?? [];
+  const wh        = settings?.workingHours ?? {};
+  const workSlots = settings?.workSlots    ?? [];
+
+  const connected   = isConnected();
+  const allBoards   = getState().allBoards ?? [];
+  const enabledIds  = settings?.enabledBoardIds ?? null;
 
   el.innerHTML = `
     <div class="view-header">
       <h2>Settings ⚙️</h2>
     </div>
+
+    <!-- Trello connection -->
+    <section class="settings-section">
+      <h3>Trello Connection</h3>
+      <p class="settings-hint">
+        Connect your Trello account so the app can read your boards and cards.
+        Your API key and token are stored only in your browser's localStorage.
+      </p>
+      <div class="cal-status">
+        Status: <span id="trello-status-text">${connected ? "✅ Connected" : "❌ Not connected"}</span>
+      </div>
+
+      ${connected ? `
+        <div class="settings-hint" style="margin-top: 0.5rem;">
+          API key: <code>${esc(getApiKey())}</code>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+          <button class="btn-secondary" id="trello-refresh">🔄 Refresh boards &amp; cards</button>
+          <button class="btn-ghost"     id="trello-disconnect">Disconnect</button>
+        </div>
+
+        ${allBoards.length ? `
+        <div style="margin-top:1.25rem;">
+          <p class="settings-hint" style="margin-bottom:8px;">Import cards from these boards:</p>
+          <div class="board-filter-list">
+            ${allBoards.map(b => `
+              <label class="board-filter-row">
+                <input type="checkbox" class="board-enabled-chk" data-board-id="${b.id}"
+                       ${(!enabledIds || enabledIds.includes(b.id)) ? "checked" : ""} />
+                ${esc(b.name)}
+              </label>
+            `).join("")}
+          </div>
+          <button class="btn-ghost btn-sm mt-sm" id="save-board-filter">Save board selection</button>
+        </div>
+        ` : ""}
+      ` : `
+        <div class="form-row" style="margin-top:0.75rem;">
+          <label>Trello API Key <span class="hint">— from <a href="https://trello.com/app-key" target="_blank" rel="noopener">trello.com/app-key</a></span></label>
+          <input type="text" id="trello-api-key" placeholder="Paste your API key here" autocomplete="off"
+                 value="${esc(localStorage.getItem("trello_key_pending") ?? "")}" />
+        </div>
+        <button class="btn-primary" id="trello-connect">Connect Trello →</button>
+      `}
+
+      <details class="setup-instructions" style="margin-top:1rem;">
+        <summary>Setup instructions</summary>
+        <ol>
+          <li>Go to <a href="https://trello.com/app-key" target="_blank" rel="noopener">trello.com/app-key</a> and copy your API Key.</li>
+          <li>Paste it in the field above and click "Connect Trello →".</li>
+          <li>Trello will ask you to approve access — click Allow.</li>
+          <li>You'll be redirected back here automatically.</li>
+        </ol>
+      </details>
+    </section>
 
     <!-- Working hours -->
     <section class="settings-section">
@@ -65,8 +132,15 @@ export function renderSettings() {
     <!-- Scheduler -->
     <section class="settings-section">
       <h3>Auto-Scheduler</h3>
-      <p class="settings-hint">Automatically place unscheduled tasks in the latest available slot before their due date.</p>
-      <button class="btn-primary" id="run-scheduler">🗓 Run auto-scheduler</button>
+      <p class="settings-hint">Automatically place unscheduled Trello cards in the latest available slot before their due date.</p>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button class="btn-primary" id="run-scheduler">🗓 Run auto-scheduler</button>
+        <button class="btn-ghost"   id="reset-blockers">🔗 Reset blocker data</button>
+      </div>
+      <p class="settings-hint" style="margin-top:0.5rem;">
+        "Reset blocker data" clears any locally-saved blocker relationships and re-imports them fresh from Trello.
+        Use this if cards are showing stale or incorrect blockers.
+      </p>
       <div id="scheduler-result" class="scheduler-result hidden"></div>
     </section>
 
@@ -94,18 +168,61 @@ export function renderSettings() {
         </ol>
       </details>
     </section>
-
-    <!-- Firebase config -->
-    <section class="settings-section">
-      <h3>Firebase / Firestore</h3>
-      <p class="settings-hint">
-        Edit <code>js/firebase-config.js</code> to add your Firebase project credentials.
-        See the comments at the top of that file for step-by-step instructions.
-      </p>
-    </section>
   `;
 
-  // Working hours checkboxes enable/disable time inputs
+  // ── Trello section ────────────────────────────────────────────────────────────
+  if (connected) {
+    el.querySelector("#trello-refresh").addEventListener("click", async () => {
+      const btn = el.querySelector("#trello-refresh");
+      btn.disabled = true;
+      btn.textContent = "⏳ Refreshing…";
+      try {
+        await loadTrelloData();
+        toast("Boards and cards refreshed! 🔄", "success");
+      } catch (err) {
+        toast("Refresh failed: " + err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🔄 Refresh boards & cards";
+      }
+    });
+
+    const saveBoardFilterBtn = el.querySelector("#save-board-filter");
+    if (saveBoardFilterBtn) {
+      saveBoardFilterBtn.addEventListener("click", async () => {
+        const checked = [...el.querySelectorAll(".board-enabled-chk:checked")]
+          .map(c => c.dataset.boardId);
+        saveSettings({ enabledBoardIds: checked });
+        setState({ settings: { ...getState().settings, enabledBoardIds: checked } });
+        saveBoardFilterBtn.disabled = true;
+        saveBoardFilterBtn.textContent = "⏳ Reloading…";
+        try {
+          await loadTrelloData();
+          toast("Board selection saved!", "success");
+        } finally {
+          saveBoardFilterBtn.disabled = false;
+          saveBoardFilterBtn.textContent = "Save board selection";
+        }
+      });
+    }
+
+    el.querySelector("#trello-disconnect").addEventListener("click", () => {
+      if (!confirm("Disconnect Trello? This will clear your API key and token from the browser.")) return;
+      clearCredentials();
+      setState({ trelloConnected: false, projects: [], tasks: [] });
+      toast("Trello disconnected.", "info");
+      renderSettings();
+      document.getElementById("config-banner").style.display = "";
+    });
+  } else {
+    el.querySelector("#trello-connect").addEventListener("click", () => {
+      const key = el.querySelector("#trello-api-key").value.trim();
+      if (!key) { toast("Please paste your Trello API key first.", "error"); return; }
+      startOAuth(key);
+    });
+  }
+
+  // ── Working hours ─────────────────────────────────────────────────────────────
   el.querySelectorAll(".wh-enabled").forEach(chk => {
     chk.addEventListener("change", () => {
       const dow   = chk.dataset.dow;
@@ -116,8 +233,7 @@ export function renderSettings() {
     });
   });
 
-  // Save working hours
-  el.querySelector("#save-working-hours").addEventListener("click", async () => {
+  el.querySelector("#save-working-hours").addEventListener("click", () => {
     const workingHours = {};
     for (let dow = 0; dow < 7; dow++) {
       const chk   = el.querySelector(`.wh-enabled[data-dow="${dow}"]`);
@@ -125,17 +241,13 @@ export function renderSettings() {
       const end   = el.querySelector(`.wh-end[data-dow="${dow}"]`).value;
       workingHours[dow] = chk.checked ? { start, end } : null;
     }
-    try {
-      const updated = { ...(getState().settings ?? {}), workingHours };
-      setState({ settings: updated });
-      await saveSettings({ workingHours });
-      toast("Working hours saved! 🕐", "success");
-    } catch (err) {
-      toast("Error saving: " + err.message, "error");
-    }
+    const updated = { ...(getState().settings ?? {}), workingHours };
+    setState({ settings: updated });
+    saveSettings({ workingHours });
+    toast("Working hours saved! 🕐", "success");
   });
 
-  // Work slot CRUD
+  // ── Work slot CRUD ────────────────────────────────────────────────────────────
   el.querySelector("#add-work-slot").addEventListener("click", () => {
     const list = el.querySelector("#ws-list");
     const newSlot = {
@@ -154,20 +266,22 @@ export function renderSettings() {
 
   el.querySelectorAll(".ws-row").forEach(row => bindWorkSlotRow(row));
 
-  // Run scheduler
+  // ── Auto-scheduler ────────────────────────────────────────────────────────────
   el.querySelector("#run-scheduler").addEventListener("click", async () => {
     const btn = el.querySelector("#run-scheduler");
     const resultDiv = el.querySelector("#scheduler-result");
     btn.disabled = true;
     btn.textContent = "⏳ Scheduling…";
     try {
-      const { scheduled, warnings } = await runScheduler();
+      const { scheduled, late, warnings } = await runScheduler();
       resultDiv.classList.remove("hidden");
       resultDiv.innerHTML = `
         <p>✅ Scheduled <strong>${scheduled.length}</strong> task${scheduled.length !== 1 ? "s" : ""}.</p>
-        ${warnings.length ? `<p class="warn-text">⚠️ <strong>${warnings.length}</strong> task${warnings.length !== 1 ? "s" : ""} could not be scheduled before their deadline: ${warnings.map(t => esc(t.name)).join(", ")}</p>` : ""}
+        ${late.length ? `<p class="warn-text">⚠️ <strong>${late.length}</strong> task${late.length !== 1 ? "s" : ""} scheduled past their due date: ${late.map(t => esc(t.name)).join(", ")}</p>` : ""}
+        ${warnings.length ? `<p class="warn-text">⛔ <strong>${warnings.length}</strong> task${warnings.length !== 1 ? "s" : ""} could not be scheduled: ${warnings.map(t => esc(t.name)).join(", ")}</p>` : ""}
       `;
       toast(`Scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}! 🗓`, "success");
+      rerenderCurrent();
     } catch (err) {
       toast("Scheduler error: " + err.message, "error");
     } finally {
@@ -176,7 +290,24 @@ export function renderSettings() {
     }
   });
 
-  // Connect calendar
+  el.querySelector("#reset-blockers").addEventListener("click", async () => {
+    if (!confirm("Clear all locally-saved blocker data and re-import from Trello?")) return;
+    const btn = el.querySelector("#reset-blockers");
+    btn.disabled = true;
+    btn.textContent = "⏳ Resetting…";
+    try {
+      clearAllBlockerIds();
+      await loadTrelloData();
+      toast("Blocker data reset and re-imported from Trello. 🔗", "success");
+    } catch (err) {
+      toast("Reset failed: " + err.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "🔗 Reset blocker data";
+    }
+  });
+
+  // ── Google Calendar ───────────────────────────────────────────────────────────
   el.querySelector("#connect-calendar").addEventListener("click", async () => {
     try {
       await connectCalendar();
@@ -192,8 +323,7 @@ export function renderSettings() {
 
 function workSlotRow(slot) {
   const dayBtns = DAY_ABBREV.map((label, i) => {
-    // i maps: 0=Su,1=Mo,2=Tu,3=We,4=Th,5=Fr,6=Sa → dow index
-    const dow = [0,1,2,3,4,5,6][i];
+    const dow    = [0,1,2,3,4,5,6][i];
     const active = (slot.days ?? []).includes(dow);
     return `<button type="button" class="ws-day-btn ${active ? "active" : ""}" data-dow="${dow}">${label}</button>`;
   }).join("");
@@ -212,24 +342,23 @@ function workSlotRow(slot) {
 }
 
 function bindWorkSlotRow(row) {
-  // Day toggle buttons
   row.querySelectorAll(".ws-day-btn").forEach(btn => {
     btn.addEventListener("click", () => btn.classList.toggle("active"));
   });
 
-  row.querySelector(".ws-save").addEventListener("click", async () => {
-    await saveWorkSlotsFromDOM();
+  row.querySelector(".ws-save").addEventListener("click", () => {
+    saveWorkSlotsFromDOM();
     toast("Time slots saved! 🕐", "success");
   });
 
-  row.querySelector(".ws-delete").addEventListener("click", async () => {
+  row.querySelector(".ws-delete").addEventListener("click", () => {
     row.remove();
-    await saveWorkSlotsFromDOM();
+    saveWorkSlotsFromDOM();
     toast("Time slot removed.", "info");
   });
 }
 
-async function saveWorkSlotsFromDOM() {
+function saveWorkSlotsFromDOM() {
   const rows = document.querySelectorAll(".ws-row");
   const workSlots = Array.from(rows).map(row => ({
     id:        row.dataset.wsId,
@@ -243,7 +372,7 @@ async function saveWorkSlotsFromDOM() {
 
   const updated = { ...(getState().settings ?? {}), workSlots };
   setState({ settings: updated });
-  await saveSettings({ workSlots });
+  saveSettings({ workSlots });
 }
 
 function esc(str) {

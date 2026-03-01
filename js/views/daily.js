@@ -3,9 +3,9 @@
  */
 
 import { getState } from "../store.js";
-import { fromTs, completeTask } from "../db.js";
+import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { formatTime, formatDate, priorityBadge, toast, addDays } from "../ui-utils.js";
+import { formatTime, formatDate, priorityBadge, addDays } from "../ui-utils.js";
 
 let dayOffset = 0;
 
@@ -16,19 +16,32 @@ export function renderDaily() {
   const base  = new Date(); base.setHours(0,0,0,0);
   const today = addDays(base, dayOffset);
 
-  const dayTasks = tasks
-    .filter(t => {
+  // Build display entries — one per block that falls on this day.
+  // Split tasks contribute one entry per block on this day; single-block
+  // tasks contribute one entry using scheduledStart/scheduledEnd.
+  const dayEntries = [];
+  for (const t of tasks) {
+    if (t.scheduledBlocks?.length > 1) {
+      t.scheduledBlocks.forEach((b, i) => {
+        const bs = new Date(b.start);
+        if (bs.toDateString() === today.toDateString()) {
+          dayEntries.push({ task: t, start: bs, end: new Date(b.end),
+            blockIndex: i, totalBlocks: t.scheduledBlocks.length });
+        }
+      });
+    } else {
       const s = fromTs(t.scheduledStart);
-      return s && s.toDateString() === today.toDateString();
-    })
-    .sort((a, b) => {
-      const sa = fromTs(a.scheduledStart);
-      const sb = fromTs(b.scheduledStart);
-      return (sa ?? 0) - (sb ?? 0);
-    });
+      if (s && s.toDateString() === today.toDateString()) {
+        dayEntries.push({ task: t, start: s, end: fromTs(t.scheduledEnd), blockIndex: 0, totalBlocks: 1 });
+      }
+    }
+  }
+  dayEntries.sort((a, b) => a.start - b.start);
 
-  const totalHours   = dayTasks.reduce((s, t) => s + (t.estimatedHours ?? 0), 0);
-  const completedHrs = dayTasks.filter(t => t.completed).reduce((s, t) => s + (t.estimatedHours ?? 0), 0);
+  const blockHours = ({ task, start, end, totalBlocks }) =>
+    totalBlocks > 1 ? (end - start) / 3600000 : (task.estimatedHours ?? 0);
+  const totalHours   = dayEntries.reduce((s, e) => s + blockHours(e), 0);
+  const completedHrs = dayEntries.filter(e => e.task.completed).reduce((s, e) => s + blockHours(e), 0);
   const pct = totalHours > 0 ? Math.round((completedHrs / totalHours) * 100) : 0;
 
   const isToday = dayOffset === 0;
@@ -42,7 +55,6 @@ export function renderDaily() {
         <span class="day-label">${dateLabel}</span>
         <button class="btn-ghost" id="df-next">Next →</button>
         <button class="btn-ghost" id="df-today">Today</button>
-        <button class="btn-primary" id="df-new-task">+ Task</button>
       </div>
     </div>
 
@@ -60,12 +72,12 @@ export function renderDaily() {
 
     <!-- Task timeline -->
     <div class="daily-timeline">
-      ${dayTasks.length
-        ? dayTasks.map(t => dailyTaskCard(t)).join("")
+      ${dayEntries.length
+        ? dayEntries.map(entry => dailyTaskCard(entry)).join("")
         : `<div class="empty-state">
              <div class="empty-icon">🌸</div>
              <p>No tasks scheduled for ${dateLabel}.</p>
-             <button class="btn-primary mt-sm" id="df-add-empty">Add a task</button>
+             <p class="empty-hint">Run the auto-scheduler in Settings, or drag cards in the Weekly view.</p>
            </div>`
       }
     </div>
@@ -78,38 +90,21 @@ export function renderDaily() {
   el.querySelector("#df-prev").addEventListener("click", () => { dayOffset--; renderDaily(); });
   el.querySelector("#df-next").addEventListener("click", () => { dayOffset++; renderDaily(); });
   el.querySelector("#df-today").addEventListener("click", () => { dayOffset = 0; renderDaily(); });
-  el.querySelector("#df-new-task").addEventListener("click", () => openTaskForm());
-  el.querySelector("#df-add-empty")?.addEventListener("click", () => openTaskForm());
-
-  // Complete toggle
-  el.querySelectorAll(".complete-btn").forEach(btn => {
-    btn.addEventListener("click", async e => {
-      e.stopPropagation();
-      const taskId = btn.closest("[data-task-id]").dataset.taskId;
-      const task   = getState().tasks.find(t => t.id === taskId);
-      if (!task) return;
-      try {
-        await completeTask(task);
-        toast(task.recurring ? "Done! Next occurrence created 🔄" : "Task complete! 🎉", "success");
-      } catch (err) {
-        toast("Error: " + err.message, "error");
-      }
-    });
-  });
 
   // Edit on card click
   el.querySelectorAll(".daily-task-card:not(.task-completed)").forEach(card => {
     card.addEventListener("click", e => {
-      if (e.target.closest(".complete-btn")) return;
       const task = getState().tasks.find(t => t.id === card.dataset.taskId);
       if (task) openTaskForm(task);
     });
   });
 }
 
-function dailyTaskCard(task) {
-  const start  = fromTs(task.scheduledStart);
-  const end    = fromTs(task.scheduledEnd);
+function dailyTaskCard({ task, start, end, blockIndex, totalBlocks }) {
+  const project = getState().projects.find(p => p.id === task.projectId);
+  const stage   = project?.stages?.find(s => s.id === task.stageId);
+  const isSplit = totalBlocks > 1;
+  const blockHours = isSplit && end ? ((end - start) / 3600000).toFixed(1) : null;
 
   return `
     <div class="daily-task-card ${task.completed ? "task-completed" : ""}"
@@ -121,14 +116,14 @@ function dailyTaskCard(task) {
       </div>
       <div class="daily-card-body">
         <div class="daily-card-header">
-          <span class="task-name ${task.completed ? "strikethrough" : ""}">${esc(task.name)}</span>
-          <button class="complete-btn ${task.completed ? "completed" : ""}" title="Mark complete">
-            ${task.completed ? "✅" : "⬜"}
-          </button>
+          <span class="task-name ${task.completed ? "strikethrough" : ""}">${esc(task.name)}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}</span>
+          <span class="complete-indicator">${task.completed ? "✅" : "⬜"}</span>
         </div>
         <div class="daily-card-meta">
           ${priorityBadge(task.priority)}
-          <span class="task-hours">⏱ ${task.estimatedHours}h</span>
+          ${isSplit
+            ? `<span class="task-hours">⏱ ${blockHours}h</span><span class="split-badge">Part ${blockIndex + 1} of ${totalBlocks}</span>`
+            : `<span class="task-hours">⏱ ${task.estimatedHours}h</span>`}
           ${task.recurring ? `<span class="recurring-badge">🔄 Recurring</span>` : ""}
         </div>
         ${task.notes ? `<div class="daily-card-notes">${esc(task.notes)}</div>` : ""}
