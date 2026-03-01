@@ -25,10 +25,7 @@
         <li><a href="#" data-view="daily">
           <span class="nav-icon">☀️</span> Daily Focus
         </a></li>
-        <li><a href="#" data-view="projects">
-          <span class="nav-icon">📁</span> Projects
-        </a></li>
-        <li><a href="#" data-view="tasks">
+<li><a href="#" data-view="tasks">
           <span class="nav-icon">✅</span> All Tasks
         </a></li>
         <li><a href="#" data-view="settings">
@@ -36,6 +33,9 @@
         </a></li>
       </ul>
       <div class="sidebar-footer">
+        <button id="btn-run-scheduler" class="btn-secondary btn-sm" title="Run auto-scheduler">
+          🗓 Run Scheduler
+        </button>
         <button id="btn-connect-calendar" class="btn-secondary btn-sm" title="Connect Google Calendar">
           📆 Connect Calendar
         </button>
@@ -44,10 +44,10 @@
 
     <!-- Main content -->
     <main id="main-content">
-      <!-- Config banner (shown when Firebase is not configured) -->
+      <!-- Config banner (shown when Trello is not connected) -->
       <div id="config-banner" class="banner banner-warn" style="display:none;">
-        <strong>🔧 Firebase not configured.</strong>
-        Open <code>js/firebase-config.js</code> and add your project credentials.
+        <strong>🔗 Trello not connected.</strong>
+        Connect your Trello account to load boards and cards.
         <a href="#" data-view="settings">Go to Settings</a>
       </div>
 
@@ -55,8 +55,7 @@
       <div id="view-dashboard" class="view active"></div>
       <div id="view-weekly"    class="view"></div>
       <div id="view-daily"     class="view"></div>
-      <div id="view-projects"  class="view"></div>
-      <div id="view-tasks"     class="view"></div>
+<div id="view-tasks"     class="view"></div>
       <div id="view-settings"  class="view"></div>
     </main>
   </div>
@@ -72,20 +71,6 @@
   <!-- ===== TOAST ===== -->
   <div id="toast-container"></div>
 
-  <!-- ===== Firebase (CDN) ===== -->
-  <!-- SETUP: Replace these with your Firebase project's SDK snippet.
-       1. Go to https://console.firebase.google.com/
-       2. Create (or open) a project → Project Settings → Your apps → Web app
-       3. Copy the firebaseConfig object values into js/firebase-config.js
-       4. In Firestore Database, create a database in Native mode
-       5. Set security rules to allow read/write (single-user, local use):
-              rules_version = '2';
-              service cloud.firestore {
-                match /databases/{database}/documents {
-                  match /{document=**} { allow read, write: if true; }
-                }
-              }
-  -->
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

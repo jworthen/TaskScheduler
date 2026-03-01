@@ -1,35 +1,39 @@
 /**
  * main.js — Application entry point
- * Initialises Firebase, loads data, wires up navigation, starts real-time listeners.
+ *
+ * Initialises Trello connection, loads boards/cards, wires up navigation.
+ * Firebase / Firestore has been removed; all task data comes from Trello.
+ * Settings (working hours, work slots, Google Calendar) are stored in localStorage.
  */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { setState, getState }    from "./store.js";
+import { initModal, toast }      from "./ui-utils.js";
+import { initCalendar }          from "./calendar.js";
+import { loadSettings, watchSettings } from "./db.js";
+import {
+  loadCredentials, isConnected,
+  extractTokenFromUrl, saveCredentials,
+  getAvailableBoards, enrichBoards, getCards,
+} from "./trello.js";
 
-import { firebaseConfig, FIREBASE_CONFIGURED } from "./firebase-config.js";
-import { initDb, watchProjects, watchTasks, watchSettings, loadSettings } from "./db.js";
-import { setState, getState, subscribe } from "./store.js";
-import { initModal, toast } from "./ui-utils.js";
-import { initCalendar } from "./calendar.js";
-
+import { runScheduler }    from "./scheduler.js";
 import { renderDashboard } from "./views/dashboard.js";
 import { renderWeekly }    from "./views/weekly.js";
 import { renderDaily }     from "./views/daily.js";
-import { renderProjects }  from "./views/projects.js";
 import { renderTasks }     from "./views/tasks.js";
 import { renderSettings }  from "./views/settings.js";
 
-// ─── View registry ───────────────────────────────────────────────────────────
+// ─── View registry ────────────────────────────────────────────────────────────
 
 const VIEWS = {
   dashboard: renderDashboard,
   weekly:    renderWeekly,
   daily:     renderDaily,
-  projects:  renderProjects,
-  tasks:     renderTasks,
+tasks:     renderTasks,
   settings:  renderSettings,
 };
 
-function switchView(name) {
+export function switchView(name) {
   if (!VIEWS[name]) return;
   setState({ currentView: name });
 
@@ -41,6 +45,44 @@ function switchView(name) {
   });
 
   VIEWS[name]();
+}
+
+export function rerenderCurrent() {
+  const { currentView } = getState();
+  if (VIEWS[currentView]) VIEWS[currentView]();
+}
+
+// ─── Trello data loading ──────────────────────────────────────────────────────
+
+export async function loadTrelloData() {
+  if (!isConnected()) return;
+  try {
+    setState({ loading: true });
+
+    // Cheap fetch — populates the board-selection list in Settings
+    const allBoards = await getAvailableBoards();
+    setState({ allBoards });
+
+    // Filter to user-selected boards (default: all)
+    const { settings } = getState();
+    const enabledIds = settings?.enabledBoardIds;
+    const toLoad = enabledIds?.length
+      ? allBoards.filter(b => enabledIds.includes(b.id))
+      : allBoards;
+
+    const projects = await enrichBoards(toLoad);
+
+    // Fetch cards from selected boards in parallel
+    const cardArrays = await Promise.all(projects.map(p => getCards(p.id, p.stages.map(s => s.id))));
+    const tasks = cardArrays.flat();
+
+    setState({ projects, tasks, loading: false, trelloConnected: true });
+    rerenderCurrent();
+  } catch (err) {
+    setState({ loading: false });
+    console.error("[Trello] load error:", err);
+    toast("Trello error: " + err.message, "error");
+  }
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -56,96 +98,64 @@ async function init() {
     });
   });
 
-  // Calendar button in sidebar
   document.getElementById("btn-connect-calendar")?.addEventListener("click", () => {
     switchView("settings");
     document.getElementById("connect-calendar")?.scrollIntoView({ behavior: "smooth" });
   });
 
-  if (!FIREBASE_CONFIGURED) {
-    document.getElementById("config-banner").style.display = "";
-    setState({ projects: [], tasks: [], settings: { categories: [], workingHours: {} } });
-    switchView("dashboard");
-    toast("Add your Firebase credentials to js/firebase-config.js to get started.", "warn");
-    return;
+  const schedulerBtn = document.getElementById("btn-run-scheduler");
+  schedulerBtn?.addEventListener("click", async () => {
+    schedulerBtn.disabled = true;
+    schedulerBtn.textContent = "⏳ Scheduling…";
+    try {
+      const { scheduled, late, warnings } = await runScheduler();
+      rerenderCurrent();
+      const lateMsg = late.length ? `, ${late.length} past due` : "";
+      const warnMsg = warnings.length ? `, ${warnings.length} unschedulable` : "";
+      toast(`Scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}${lateMsg}${warnMsg} 🗓`, "success");
+    } catch (err) {
+      toast("Scheduler error: " + err.message, "error");
+    } finally {
+      schedulerBtn.disabled = false;
+      schedulerBtn.textContent = "🗓 Run Scheduler";
+    }
+  });
+
+  // Handle Trello OAuth redirect — Trello appends #token=<value> to the URL
+  const urlToken = extractTokenFromUrl();
+  if (urlToken) {
+    const pendingKey = localStorage.getItem("trello_key_pending") ?? "";
+    if (pendingKey) {
+      saveCredentials(pendingKey, urlToken);
+      localStorage.removeItem("trello_key_pending");
+      toast("Trello connected! 🎉", "success");
+    }
   }
 
-  // Firebase
-  let app;
-  try {
-    app = initializeApp(firebaseConfig);
-  } catch (err) {
-    console.error("Firebase init failed:", err);
+  // Load Trello credentials from localStorage
+  const connected = loadCredentials();
+  setState({ trelloConnected: connected });
+
+  // Load settings from localStorage (working hours, work slots, etc.)
+  watchSettings(settings => setState({ settings }));
+
+  if (!connected) {
     document.getElementById("config-banner").style.display = "";
+    setState({ projects: [], tasks: [] });
     switchView("settings");
-    toast("Firebase init failed — check your config.", "error");
     return;
   }
 
-  initDb(app);
+  // Load boards + cards from Trello
+  await loadTrelloData();
 
-  // ── localStorage mirror ─────────────────────────────────────────────────────
-  // Display cached data IMMEDIATELY on load (before Firestore responds).
-  // Every time Firestore fires, the cache is refreshed, so it's always current.
-  // This makes the app work even when the Firestore round-trip is slow or the
-  // page is refreshed before the server has fully confirmed a write.
-  function readCache(key) {
-    try { return JSON.parse(localStorage.getItem(key) ?? "null"); } catch { return null; }
-  }
-  function writeCache(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-  }
-  function clearCacheKey(key) {
-    try { localStorage.removeItem(key); } catch {}
-  }
-
-  const cached = {
-    projects: readCache("ts_projects"),
-    tasks:    readCache("ts_tasks"),
-    settings: readCache("ts_settings"),
-  };
-  if (cached.projects) setState({ projects: cached.projects });
-  if (cached.tasks)    setState({ tasks:    cached.tasks    });
-  if (cached.settings) setState({ settings: cached.settings });
-
-  // Seed the settings doc with defaults on first run.
-  loadSettings().catch(() => {});
-
-  // Real-time listeners — update store, mirror to localStorage, re-render
-  const onFirestoreErr = err => {
-    console.error("Firestore listener error:", err);
-    toast(`Firestore error: ${err.message}. Check your security rules and network connection.`, "error");
-  };
-
-  watchSettings(settings => {
-    if (settings) writeCache("ts_settings", settings);
-    setState({ settings });
-    rerenderCurrent();
-  }, onFirestoreErr);
-
-  watchProjects(projects => {
-    console.log(`[Firestore] watchProjects: ${projects.length} project(s)`);
-    writeCache("ts_projects", projects);
-    setState({ projects });
-    rerenderCurrent();
-  }, onFirestoreErr);
-
-  watchTasks(tasks => {
-    console.log(`[Firestore] watchTasks: ${tasks.length} task(s)`);
-    writeCache("ts_tasks", tasks);
-    setState({ tasks });
-    rerenderCurrent();
-  }, onFirestoreErr);
-
-  // Google Calendar (non-blocking)
+  // Google Calendar (non-blocking — optional integration)
   await initCalendar().catch(() => {});
 
   switchView("dashboard");
-}
 
-function rerenderCurrent() {
-  const { currentView } = getState();
-  if (VIEWS[currentView]) VIEWS[currentView]();
+  // Refresh Trello data every 5 minutes
+  setInterval(loadTrelloData, 5 * 60 * 1000);
 }
 
 document.addEventListener("DOMContentLoaded", init);

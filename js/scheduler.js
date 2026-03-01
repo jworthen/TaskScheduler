@@ -1,120 +1,244 @@
 /**
  * scheduler.js — Scheduling logic
  *
- * Strategy: "Latest possible" placement
+ * Strategy: "Latest possible" placement with soft due-date fallback
  * For each schedulable task (sorted by priority then due date):
- *   - Walk backward from the due date
- *   - Find the latest contiguous window of available time that fits
- *     estimatedHours, respecting working hours and calendar busy blocks
- *   - If no window found before today → mark as "cannot schedule" warning
+ *   1. Respect start date strictly — never schedule before task.startDate.
+ *   2. Try to place the task as late as possible before its due date.
+ *   3. If there is not enough capacity before the due date, find the earliest
+ *      available slot AFTER the due date (up to the 60-day horizon) and
+ *      schedule there — the task is marked "late" but still gets a slot.
+ *   4. Only warn (unschedulable) if truly no slot exists anywhere.
+ *
+ * Scheduling metadata is persisted via saveSchedMeta (localStorage) since
+ * tasks live in Trello rather than Firestore.
  */
 
-import { fromTs, toTs, updateTask } from "./db.js";
-import { getState, getSchedulableTasks } from "./store.js";
+import { fromTs } from "./db.js";
+import { saveSchedMeta } from "./trello.js";
+import { getState, setState } from "./store.js";
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
 /**
  * Build a list of available time slots for a given date range.
- * @param {Date} from
- * @param {Date} to
- * @param {object} workingHours  — { 0: null | {start,end}, 1: ..., ... }
- * @param {Array}  busyBlocks    — [{ start: Date, end: Date }, ...]
- * @returns {Array<{start:Date, end:Date, freeMinutes:number}>} one entry per day
+ * When workSlots are configured they take precedence over workingHours so that
+ * the scheduler uses the exact same time windows shown in the weekly view
+ * (including lunch gaps, evening blocks, etc.).  One slot entry is created per
+ * (day × workSlot interval); falls back to one entry per (day × workingHours)
+ * when workSlots is empty.
+ * @param {Date}   from
+ * @param {Date}   to
+ * @param {object} workingHours — { 0: null | {start,end}, 1: ..., ... }
+ * @param {Array}  busyBlocks   — [{ start: Date, end: Date }, ...]
+ * @param {Array}  workSlots    — settings.workSlots (may be empty)
+ * @returns {Array<{start:Date, end:Date, freeMinutes:number, dayBusy:Array}>}
  */
-export function buildAvailableSlots(from, to, workingHours, busyBlocks) {
-  const slots = [];
+export function buildAvailableSlots(from, to, workingHours, busyBlocks, workSlots = []) {
+  const slots  = [];
   const cursor = startOfDay(from);
   const end    = startOfDay(to);
 
   while (cursor <= end) {
-    const dow = cursor.getDay();
-    const wh  = workingHours[dow];
-    if (wh) {
-      const dayStart = parseTime(cursor, wh.start);
-      const dayEnd   = parseTime(cursor, wh.end);
+    const dayIntervals = getDayIntervals(cursor, workSlots, workingHours);
 
-      // Subtract busy blocks that overlap this day
-      const dayBusy = busyBlocks.filter(b =>
-        b.start < dayEnd && b.end > dayStart
-      ).map(b => ({
-        start: b.start < dayStart ? dayStart : b.start,
-        end:   b.end   > dayEnd   ? dayEnd   : b.end,
-      }));
+    for (const iv of dayIntervals) {
+      // Never schedule before `from` (e.g. don't place in the past)
+      const dayStart = new Date(Math.max(iv.start.getTime(), from.getTime()));
+      const dayEnd   = iv.end;
+      if (dayStart >= dayEnd) continue; // fully clipped out
+
+      const dayBusy = busyBlocks
+        .filter(b => b.start < dayEnd && b.end > dayStart)
+        .map(b => ({
+          start: b.start < dayStart ? dayStart : b.start,
+          end:   b.end   > dayEnd   ? dayEnd   : b.end,
+        }));
 
       const freeMinutes = freeTimeInDay(dayStart, dayEnd, dayBusy);
       slots.push({ date: new Date(cursor), start: dayStart, end: dayEnd, dayBusy, freeMinutes });
     }
+
     cursor.setDate(cursor.getDate() + 1);
   }
   return slots;
 }
 
 /**
+ * Topologically sort tasks so that every blocker appears before the tasks
+ * that depend on it. Within the same dependency level, tasks are ordered by
+ * priority then due date. Cycles are broken by skipping the back-edge.
+ */
+function topoSort(tasks) {
+  const taskMap = new Map(tasks.map(t => [t.id, t]));
+  const visited = new Set();
+  const inStack = new Set(); // cycle detection
+  const result  = [];
+
+  function visit(task) {
+    if (visited.has(task.id)) return;
+    if (inStack.has(task.id)) return; // back-edge — skip to break cycle
+    inStack.add(task.id);
+    for (const blockerId of task.blockerIds ?? []) {
+      const blocker = taskMap.get(blockerId);
+      if (blocker) visit(blocker);
+    }
+    inStack.delete(task.id);
+    visited.add(task.id);
+    result.push(task);
+  }
+
+  // Seed in priority + due-date order so tiebreaking is stable and meaningful
+  const seeded = [...tasks].sort((a, b) => {
+    const pa = PRIORITY_ORDER[a.priority] ?? 1;
+    const pb = PRIORITY_ORDER[b.priority] ?? 1;
+    if (pa !== pb) return pa - pb;
+    const da = fromTs(a.dueDate) ?? new Date(9999, 0);
+    const db = fromTs(b.dueDate) ?? new Date(9999, 0);
+    return da - db;
+  });
+  for (const task of seeded) visit(task);
+  return result;
+}
+
+/**
  * Schedule all unscheduled schedulable tasks.
- * Mutates Firestore via updateTask.
+ * Persists scheduling metadata to localStorage via saveSchedMeta.
  * Returns { scheduled: [...], warnings: [...] }
  */
 export async function runScheduler() {
-  const { settings, calendarEvents } = getState();
+  const { settings, calendarEvents, tasks: allTasks } = getState();
   const workingHours = settings?.workingHours ?? defaultWorkingHours();
+  const workSlots    = settings?.workSlots    ?? [];
   const busyBlocks   = calendarEvents.map(e => ({
     start: new Date(e.start),
     end:   new Date(e.end),
   }));
 
-  const tasks = getSchedulableTasks().filter(t => !t.manuallyScheduled);
-  // Sort: priority first, then earliest due date
-  tasks.sort((a, b) => {
-    const pa = PRIORITY_ORDER[a.priority] ?? 1;
-    const pb = PRIORITY_ORDER[b.priority] ?? 1;
-    if (pa !== pb) return pa - pb;
-    const da = fromTs(a.dueDate) ?? new Date(9999, 0);
-    const db_ = fromTs(b.dueDate) ?? new Date(9999, 0);
-    return da - db_;
-  });
+  // Include all incomplete, non-manually-scheduled tasks — even those with unfinished
+  // blockers. Topological ordering ensures a blocker is always scheduled before the
+  // tasks that depend on it, and the earliest-start logic below enforces that a
+  // dependent task cannot begin before its blocker's scheduled end time.
+  const incomplete = allTasks.filter(t => !t.completed && !t.manuallyScheduled);
+  const tasks = topoSort(incomplete);
 
-  const now        = new Date();
-  const horizon    = new Date(now);
+  const now     = new Date();
+  const horizon = new Date(now);
   horizon.setDate(horizon.getDate() + 60); // look 60 days ahead
 
   // Build a mutable occupied list (already-scheduled tasks count as busy)
-  const occupied = []; // {start:Date, end:Date}
+  const occupied = []; // { start: Date, end: Date }
 
   const scheduled = [];
-  const warnings  = [];
+  const late      = []; // scheduled, but past due date
+  const warnings  = []; // truly could not be placed anywhere
+
+  // Track updated tasks to batch into a single setState call
+  const updatedMeta = {}; // taskId → { scheduledStart, scheduledEnd }
 
   for (const task of tasks) {
     if (!task.dueDate) continue; // can't schedule without a due date
 
-    const due          = fromTs(task.dueDate);
-    const neededMins   = (task.estimatedHours ?? 1) * 60;
-    const rangeEnd     = due   < horizon ? due   : horizon;
-    const rangeStart   = now   < rangeEnd ? now   : rangeEnd;
+    // Ignore the time component on due dates — treat as end-of-day.
+    const due        = endOfDay(fromTs(task.dueDate));
+    const neededMins = (task.estimatedHours ?? 1) * 60;
 
-    const slots = buildAvailableSlots(rangeStart, rangeEnd, workingHours, [
-      ...busyBlocks,
-      ...occupied,
-    ]);
+    // Earliest start = max(now, task.startDate, scheduled end of every unfinished blocker).
+    // Because tasks are processed in topological order, any blocker in our task list will
+    // already have an entry in updatedMeta by the time we reach this task.
+    let earliestMs = task.startDate
+      ? Math.max(task.startDate.getTime(), now.getTime())
+      : now.getTime();
+    for (const blockerId of task.blockerIds ?? []) {
+      const blockerEnd = updatedMeta[blockerId]?.scheduledEnd;
+      if (blockerEnd) earliestMs = Math.max(earliestMs, blockerEnd.getTime());
+    }
+    const earliest = new Date(earliestMs);
 
-    // Walk backward: latest slot first
-    const placed = placeLatest(slots, neededMins, due);
-    if (placed) {
-      await updateTask(task.id, {
-        scheduledStart: placed.start,
-        scheduledEnd:   placed.end,
-      });
-      occupied.push({ start: placed.start, end: placed.end });
-      scheduled.push({ task, placed });
+    const rangeEnd   = due < horizon ? due : horizon;
+    const rangeStart = earliest < rangeEnd ? earliest : rangeEnd;
+
+    const busyNow = [...busyBlocks, ...occupied];
+    const slots   = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow, workSlots);
+
+    // ── Pass 1: single contiguous block before due date ───────────────────────
+    let placedBlocks = null;
+    const single = placeLatest(slots, neededMins, due);
+    if (single) placedBlocks = [single];
+
+    // ── Pass 1.5: split across multiple slots before due date ─────────────────
+    if (!placedBlocks) {
+      const split = placeSplit(slots, neededMins);
+      if (split) placedBlocks = split;
+    }
+
+    // ── Pass 2: soft due date — earliest slot(s) after due date ───────────────
+    let isLate = false;
+    if (!placedBlocks) {
+      const extStart  = new Date(Math.max(due.getTime(), earliest.getTime()));
+      const lateSlots = buildAvailableSlots(extStart, horizon, workingHours, busyNow, workSlots);
+      const lateSingle = placeEarliest(lateSlots, neededMins);
+      if (lateSingle) {
+        placedBlocks = [lateSingle];
+        isLate = true;
+      } else {
+        const lateSplit = placeSplit(lateSlots, neededMins, 30, true /* forward */);
+        if (lateSplit) { placedBlocks = lateSplit; isLate = true; }
+      }
+      if (isLate) late.push(task);
+    }
+
+    if (placedBlocks) {
+      const firstBlock = placedBlocks[0];
+      const lastBlock  = placedBlocks[placedBlocks.length - 1];
+      const metaPatch = {
+        scheduledStart:     firstBlock.start.toISOString(),
+        scheduledEnd:       lastBlock.end.toISOString(),
+        scheduledBlocks:    placedBlocks.length > 1
+          ? placedBlocks.map(b => ({ start: b.start.toISOString(), end: b.end.toISOString() }))
+          : null,
+        schedUnschedulable: false,
+      };
+      saveSchedMeta(task.id, metaPatch);
+      for (const b of placedBlocks) occupied.push(b);
+      updatedMeta[task.id] = {
+        scheduledStart:     firstBlock.start,
+        scheduledEnd:       lastBlock.end,
+        scheduledBlocks:    placedBlocks.length > 1 ? placedBlocks : null,
+        schedUnschedulable: false,
+      };
+      scheduled.push({ task, placed: firstBlock });
     } else {
+      // Diagnose why placement failed so the UI can surface a useful hint.
+      let schedUnschedulableReason;
+      if (earliest > horizon) {
+        // A blocker's scheduled end pushed the earliest start past the 60-day window.
+        schedUnschedulableReason = "blocker_beyond_horizon";
+      } else if ((task.blockerIds ?? []).some(bid => updatedMeta[bid]?.schedUnschedulable)) {
+        // At least one blocker couldn't be placed, so this task can't be either.
+        schedUnschedulableReason = "blocker_unschedulable";
+      } else {
+        // Simply not enough free working time in the 60-day window.
+        schedUnschedulableReason = "no_capacity";
+      }
+      saveSchedMeta(task.id, { schedUnschedulable: true, schedUnschedulableReason });
+      updatedMeta[task.id] = { ...updatedMeta[task.id], schedUnschedulable: true, schedUnschedulableReason };
       warnings.push(task);
     }
   }
 
-  return { scheduled, warnings };
+  // Update the in-memory store in one pass
+  if (Object.keys(updatedMeta).length) {
+    const updated = allTasks.map(t =>
+      updatedMeta[t.id] ? { ...t, ...updatedMeta[t.id] } : t
+    );
+    setState({ tasks: updated });
+  }
+
+  return { scheduled, late, warnings };
 }
 
-// ─── Internal helpers ────────────────────────────────────────────────────────
+// ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function placeLatest(slots, neededMins, due) {
   // Try from the last day backward
@@ -136,6 +260,84 @@ function placeLatest(slots, neededMins, due) {
     }
   }
   return null;
+}
+
+/**
+ * Split a task across multiple free intervals.
+ * forward=false (default): latest-possible, working backwards through slots.
+ * forward=true: earliest-possible, working forwards through slots.
+ * Skips any free interval shorter than minChunkMins to avoid tiny fragments.
+ * Returns chronologically-sorted [{start,end}] or null if fully unplaceable.
+ */
+function placeSplit(slots, neededMins, minChunkMins = 30, forward = false) {
+  const blocks    = [];
+  let remaining   = neededMins;
+  const slotsIter = forward ? slots : [...slots].reverse();
+
+  for (const slot of slotsIter) {
+    if (remaining <= 0) break;
+    const available  = buildFreeIntervals(slot.start, slot.end, slot.dayBusy);
+    const intervals  = forward ? available : [...available].reverse();
+
+    for (const interval of intervals) {
+      if (remaining <= 0) break;
+      const duration = (interval.end - interval.start) / 60000;
+      if (duration < minChunkMins) continue; // too small — skip
+
+      const chunkMins = Math.min(remaining, duration);
+      const start = forward
+        ? new Date(interval.start)
+        : new Date(interval.end.getTime() - chunkMins * 60000);
+      const end = forward
+        ? new Date(interval.start.getTime() + chunkMins * 60000)
+        : new Date(interval.end);
+      blocks.push({ start, end });
+      remaining -= chunkMins;
+    }
+  }
+
+  return remaining <= 0 ? blocks.sort((a, b) => a.start - b.start) : null;
+}
+
+/** Place as early as possible — used when scheduling past the due date. */
+function placeEarliest(slots, neededMins) {
+  for (const slot of slots) {
+    const available = buildFreeIntervals(slot.start, slot.end, slot.dayBusy);
+    for (const interval of available) {
+      const duration = (interval.end - interval.start) / 60000;
+      if (duration >= neededMins) {
+        const start = interval.start;
+        const end   = new Date(start.getTime() + neededMins * 60000);
+        if (end <= interval.end) return { start, end };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Return the schedulable intervals for a single calendar day.
+ * Prefers workSlots (the blocks the user defined in the weekly view) so the
+ * scheduler stays in sync with what is shown on screen.  Falls back to the
+ * simple per-day start/end from workingHours when workSlots is empty.
+ */
+function getDayIntervals(date, workSlots, workingHours) {
+  const dow = date.getDay();
+
+  if (workSlots?.length) {
+    return workSlots
+      .filter(ws => ws.days?.includes(dow))
+      .map(ws => ({
+        start: parseTime(date, ws.startTime),
+        end:   parseTime(date, ws.endTime),
+      }))
+      .filter(iv => iv.start < iv.end)
+      .sort((a, b) => a.start - b.start);
+  }
+
+  const wh = workingHours[dow];
+  if (!wh) return [];
+  return [{ start: parseTime(date, wh.start), end: parseTime(date, wh.end) }];
 }
 
 function buildFreeIntervals(dayStart, dayEnd, busyBlocks) {
@@ -165,6 +367,12 @@ function parseTime(date, timeStr) {
 function startOfDay(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfDay(date) {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
   return d;
 }
 
