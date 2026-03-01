@@ -1,5 +1,14 @@
 /* ─── Fonts ──────────────────────────────────────────────── */
 @font-face {
+  font-family: 'Halmera';
+  src: url('../fonts/Halmera-jEA3O.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  size-adjust: 180%;
+}
+
+@font-face {
   font-family: 'Proxima Soft';
   src: url('../fonts/proxima-soft-7.ttf') format('truetype');
   font-weight: normal;
@@ -10,9 +19,9 @@
 /* ─── Tokens ─────────────────────────────────────────────── */
 :root {
   /* purple */
-  --brand:        #a02cb4;
-  --brand-light:  #f3d5f8;
-  --brand-dark:   #7b1f8b;
+  --purple:        #a02cb4;
+  --purple-light:  #f3d5f8;
+  --purple-dark:   #7b1f8b;
   /* orange */
   --accent:       #f67e35;
   --accent-light: #fde9d6;
@@ -26,8 +35,9 @@
   --yellow:       #f0e557;
   --yellow-light: #fafac0;
   /* teal */
-  --blue:         #54c5ba;
-  --blue-light:   #d0f0ee;
+  --brand:         #54c5ba;
+  --brand-light:   #d0f0ee;
+  --brand-dark:    #018f81;
 
   --bg:           #f7f3fb;
   --surface:      #ffffff;
