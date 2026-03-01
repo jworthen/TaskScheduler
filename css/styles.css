@@ -1,14 +1,5 @@
 /* ─── Fonts ──────────────────────────────────────────────── */
 @font-face {
-  font-family: 'Halmera';
-  src: url('../fonts/Halmera-jEA3O.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-  size-adjust: 180%;
-}
-
-@font-face {
   font-family: 'Proxima Soft';
   src: url('../fonts/proxima-soft-7.ttf') format('truetype');
   font-weight: normal;
@@ -53,8 +44,7 @@
   --radius-sm:    8px;
   --shadow:       0 2px 12px rgba(60,64,152,.08);
   --shadow-md:    0 4px 24px rgba(60,64,152,.14);
-  /* Halmera + Proxima Soft (load via Adobe Fonts); Nunito/Nunito Sans are fallbacks */
-  --font:         'Halmera', 'Nunito', sans-serif;
+  --font:         'Proxima Soft', 'Nunito', sans-serif;
   --font-body:    'Proxima Soft', 'Nunito Sans', sans-serif;
 }
 
