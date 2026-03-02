@@ -154,8 +154,8 @@ async function init() {
 
   switchView("dashboard");
 
-  // Refresh Trello data every 5 minutes
-  setInterval(loadTrelloData, 5 * 60 * 1000);
+  // Refresh Trello data every 15 minutes
+  setInterval(loadTrelloData, 15 * 60 * 1000);
 }
 
 document.addEventListener("DOMContentLoaded", init);

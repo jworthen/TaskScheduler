@@ -21,6 +21,26 @@ const API = "https://api.trello.com/1";
 let _key   = "";
 let _token = "";
 
+// ─── Request throttle ─────────────────────────────────────────────────────────
+// Trello allows 100 requests per 10 s per token. We serialize all calls through
+// a queue with a 150 ms gap, keeping comfortably under that limit even when
+// many boards are loaded in parallel.
+
+let _throttleQueue = Promise.resolve();
+let _lastRequest   = 0;
+const THROTTLE_MS  = 150;
+
+function enqueue(fn) {
+  const next = _throttleQueue.then(async () => {
+    const wait = Math.max(0, _lastRequest + THROTTLE_MS - Date.now());
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    _lastRequest = Date.now();
+    return fn();
+  });
+  _throttleQueue = next.catch(() => {}); // don't break the chain on errors
+  return next;
+}
+
 // Cache of custom field definitions per board: boardId → { effortFieldId: string|null }
 const _cfCache = new Map();
 
@@ -91,7 +111,7 @@ function authQS(extra = {}) {
 }
 
 async function get(path, params = {}) {
-  const res = await fetch(`${API}${path}?${authQS(params)}`);
+  const res = await enqueue(() => fetch(`${API}${path}?${authQS(params)}`));
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Trello ${res.status}: ${text.slice(0, 200)}`);
