@@ -40,9 +40,11 @@ export function switchView(name) {
   document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
   document.getElementById(`view-${name}`).classList.add("active");
 
-  document.querySelectorAll(".nav-links a").forEach(a => {
+  document.querySelectorAll(".nav-links a, .mobile-nav-item").forEach(a => {
     a.classList.toggle("active", a.dataset.view === name);
   });
+  // Scroll main content back to top on view change
+  document.getElementById("main-content").scrollTop = 0;
 
   VIEWS[name]();
 }
