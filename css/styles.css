@@ -901,3 +901,137 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #c0b0d0; }
+
+/* ============================================================
+   RESPONSIVE / MOBILE  (≤700px)
+   ============================================================ */
+
+/* Hidden on desktop — shown only inside the media query below */
+#mobile-nav { display: none; }
+
+@media (max-width: 700px) {
+
+  /* ── Layout ──────────────────────────────── */
+  body { overflow: auto; }
+
+  #app {
+    grid-template-columns: 1fr;
+    height: 100dvh;
+  }
+
+  #sidebar { display: none; }
+
+  #main-content {
+    padding: 16px 14px 80px; /* bottom pad clears the nav bar */
+    overflow-y: auto;
+    height: calc(100dvh - 60px);
+  }
+
+  /* ── Bottom nav ──────────────────────────── */
+  #mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: var(--sidebar-bg);
+    border-top: 1px solid rgba(255,255,255,.1);
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: rgba(200,160,216,.55);
+    font-family: var(--font);
+    font-size: .6rem;
+    font-weight: 700;
+    text-decoration: none;
+    padding-top: 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-nav-item.active { color: #fff; }
+  .mobile-nav-item:hover  { color: var(--brand-light); text-decoration: none; }
+  .mobile-nav-icon  { font-size: 1.3rem; line-height: 1; }
+
+  /* ── View header ─────────────────────────── */
+  .view-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+  .view-header h2 { font-size: 1.25rem; }
+  .header-actions { width: 100%; }
+
+  /* ── Stats ───────────────────────────────── */
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+
+  /* ── Task rows ───────────────────────────── */
+  .task-row { flex-direction: column; align-items: flex-start; }
+
+  /* ── Task table → card stack ─────────────── */
+  .task-table thead { display: none; }
+  .task-table, .task-table tbody, .task-table tr, .task-table td { display: block; width: 100%; }
+  .task-table tr[data-task-id] {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    padding: 10px 12px;
+  }
+  .task-table td { padding: 2px 0; border: none; }
+  .task-table td:empty { display: none; }
+  .task-table td:nth-child(7) { display: none; } /* hide scheduled col */
+
+  /* ── Filters ─────────────────────────────── */
+  .filters-bar { flex-direction: column; }
+  .filters-bar select, .filters-bar input { width: 100%; }
+
+  /* ── Weekly grid ─────────────────────────── */
+  .week-grid-wrapper { overflow-x: auto; max-height: 480px; }
+  .week-columns { grid-template-columns: repeat(7, minmax(90px, 1fr)); min-width: 630px; }
+
+  /* ── Daily view ──────────────────────────── */
+  .daily-task-card { flex-direction: column; gap: 8px; }
+  .daily-card-time { flex-direction: row; gap: 6px; min-width: unset; align-items: center; }
+
+  /* ── Kanban ──────────────────────────────── */
+  .kanban-columns {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kanban-col { width: 260px; scroll-snap-align: start; }
+
+  /* ── Modal → bottom sheet ────────────────── */
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-box {
+    border-radius: var(--radius) var(--radius) 0 0;
+    max-width: 100%;
+    max-height: 92dvh;
+    padding: 22px 18px 28px;
+  }
+
+  /* ── Forms ───────────────────────────────── */
+  .form-2col { grid-template-columns: 1fr; }
+
+  /* ── Settings ────────────────────────────── */
+  .settings-section { padding: 16px; }
+  .wh-row { flex-wrap: wrap; }
+  .wh-day { width: 100%; margin-bottom: 4px; }
+  .ws-row { flex-direction: column; align-items: flex-start; }
+
+  /* ── Tap targets ─────────────────────────── */
+  .btn-primary, .btn-secondary, .btn-ghost { min-height: 44px; }
+  .complete-btn, .complete-toggle { min-width: 44px; min-height: 44px; font-size: 1.2rem; }
+
+  /* ── Toast ───────────────────────────────── */
+  #toast-container { bottom: 70px; right: 12px; left: 12px; }
+  .toast { max-width: 100%; }
+}
