@@ -4,12 +4,15 @@
  */
 
 const state = {
-  projects:         [],
-  tasks:            [],
-  settings:         null,
-  currentView:      "dashboard",
-  calendarEvents:   [],   // read from Google Calendar
+  allBoards:         [],   // lightweight list of every admin board, for settings UI
+  projects:          [],
+  tasks:             [],
+  settings:          null,
+  currentView:       "dashboard",
+  calendarEvents:    [],   // read from Google Calendar
   calendarConnected: false,
+  trelloConnected:   false,
+  loading:           false,
 };
 
 const subscribers = {};

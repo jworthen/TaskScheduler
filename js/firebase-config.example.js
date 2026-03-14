@@ -16,7 +16,12 @@
  *    - Application type: Web application
  *    - Authorized JavaScript origins: http://localhost:PORT (e.g. http://localhost:5500)
  *    - Copy the Client ID into GOOGLE_CALENDAR_CLIENT_ID below.
+ *
+ * SETUP STEPS
+ * ===========
+ * Copy this file to firebase-config.js and fill in your values:
+ *   cp js/firebase-config.example.js js/firebase-config.js
  */
 
 /** OAuth Client ID for Google Calendar (read-only, optional) */
-export const GOOGLE_CALENDAR_CLIENT_ID = "967095672764-l18ou1jc6efr6vc0n16tv57ucbitdhkk.apps.googleusercontent.com";
+export const GOOGLE_CALENDAR_CLIENT_ID = "YOUR_GOOGLE_CALENDAR_CLIENT_ID.apps.googleusercontent.com";

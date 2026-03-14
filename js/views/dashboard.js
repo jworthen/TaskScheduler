@@ -4,9 +4,8 @@
 
 import { getState, getBlockedTasks } from "../store.js";
 import { fromTs } from "../db.js";
-import { formatDate, categoryChip, priorityBadge } from "../ui-utils.js";
+import { formatDate, priorityBadge } from "../ui-utils.js";
 import { openTaskForm } from "../task-form.js";
-import { openProjectForm } from "../project-form.js";
 
 export function renderDashboard() {
   const el = document.getElementById("view-dashboard");
@@ -14,20 +13,22 @@ export function renderDashboard() {
 
   const now        = new Date();
   const weekEnd    = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
-  const categories = settings?.categories ?? [];
+  const dueSoon = tasks
+    .filter(t => {
+      if (t.completed) return false;
+      const due = fromTs(t.dueDate);
+      return due && due <= weekEnd && due >= now;
+    })
+    .sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
 
-  const dueSoon = tasks.filter(t => {
-    if (t.completed) return false;
-    const due = fromTs(t.dueDate);
-    return due && due <= weekEnd && due >= now;
-  });
-
-  const todayTasks = tasks.filter(t => {
-    if (t.completed) return false;
-    const s = fromTs(t.scheduledStart);
-    if (!s) return false;
-    return s.toDateString() === now.toDateString();
-  });
+  const todayTasks = tasks
+    .filter(t => {
+      if (t.completed) return false;
+      const s = fromTs(t.scheduledStart);
+      if (!s) return false;
+      return s.toDateString() === now.toDateString();
+    })
+    .sort((a, b) => fromTs(a.scheduledStart) - fromTs(b.scheduledStart));
 
   const hoursToday = todayTasks.reduce((sum, t) => sum + (t.estimatedHours ?? 0), 0);
   const blocked    = getBlockedTasks();
@@ -39,13 +40,26 @@ export function renderDashboard() {
     return due && due < now;
   });
 
+  // Scheduled past due: scheduled start falls on a day strictly after the due date.
+  // Day-level comparison avoids false positives when a task is scheduled later in the
+  // day it is due (dueDate from Trello is typically midnight UTC of the due day).
+  const scheduledPastDue = tasks.filter(t => {
+    if (t.completed) return false;
+    const due   = fromTs(t.dueDate);
+    const sched = fromTs(t.scheduledStart);
+    if (!due || !sched) return false;
+    const dueDay   = new Date(due);   dueDay.setHours(0, 0, 0, 0);
+    const schedDay = new Date(sched); schedDay.setHours(0, 0, 0, 0);
+    return schedDay > dueDay;
+  }).sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
+
+  // Cannot be scheduled: scheduler explicitly flagged as unschedulable
+  const unschedulable = tasks.filter(t => !t.completed && t.schedUnschedulable)
+    .sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
+
   el.innerHTML = `
     <div class="view-header">
       <h2>Dashboard 🏠</h2>
-      <div class="header-actions">
-        <button class="btn-secondary" id="dash-new-project">+ New Project</button>
-        <button class="btn-primary"   id="dash-new-task">+ New Task</button>
-      </div>
     </div>
 
     <!-- Stats row -->
@@ -72,92 +86,96 @@ export function renderDashboard() {
     <section class="dash-section">
       <h3 class="section-title danger-title">⚠️ Overdue</h3>
       <div class="task-list">
-        ${overdue.map(t => taskRow(t, categories)).join("")}
+        ${overdue.map(t => taskRow(t)).join("")}
       </div>
     </section>` : ""}
 
     <section class="dash-section">
-      <h3 class="section-title">📅 Due this week</h3>
-      ${dueSoon.length
-        ? `<div class="task-list">${dueSoon.map(t => taskRow(t, categories)).join("")}</div>`
-        : `<p class="empty-state">Nothing due in the next 7 days 🎉</p>`}
+      <h3 class="section-title">☀️ Today's schedule</h3>
+      ${todayTasks.length
+        ? `<div class="task-list">${todayTasks.map(t => taskRow(t, true)).join("")}</div>`
+        : `<p class="empty-state">No tasks scheduled for today</p>`}
     </section>
 
     <section class="dash-section">
-      <h3 class="section-title">☀️ Today's schedule</h3>
-      ${todayTasks.length
-        ? `<div class="task-list">${todayTasks.map(t => taskRow(t, categories, true)).join("")}</div>`
-        : `<p class="empty-state">No tasks scheduled for today</p>`}
+      <h3 class="section-title">📅 Due this week</h3>
+      ${dueSoon.length
+        ? `<div class="task-list">${dueSoon.map(t => taskRow(t)).join("")}</div>`
+        : `<p class="empty-state">Nothing due in the next 7 days 🎉</p>`}
     </section>
 
     ${blocked.length ? `
     <section class="dash-section">
       <h3 class="section-title">🚫 Blocked</h3>
       <div class="task-list">
-        ${blocked.map(t => taskRow(t, categories)).join("")}
+        ${blocked.map(t => taskRow(t)).join("")}
       </div>
     </section>` : ""}
 
+    ${scheduledPastDue.length ? `
     <section class="dash-section">
-      <h3 class="section-title">📁 Projects</h3>
-      ${projects.length
-        ? `<div class="project-chips">${projects.map(projectChip).join("")}</div>`
-        : `<p class="empty-state">No projects yet — create one to get started!</p>`}
-    </section>
-  `;
+      <h3 class="section-title warn-title">⏰ Scheduled past due</h3>
+      <div class="task-list">
+        ${scheduledPastDue.map(t => taskRow(t, true, true)).join("")}
+      </div>
+    </section>` : ""}
 
-  el.querySelector("#dash-new-task").addEventListener("click", () => openTaskForm());
-  el.querySelector("#dash-new-project").addEventListener("click", () => openProjectForm());
+    ${unschedulable.length ? `
+    <section class="dash-section">
+      <h3 class="section-title danger-title">❌ Cannot be scheduled</h3>
+      <div class="task-list">
+        ${unschedulable.map(t => taskRow(t)).join("")}
+      </div>
+    </section>` : ""}
+
+  `;
 
   el.querySelectorAll(".task-row").forEach(row => {
     row.addEventListener("click", () => {
-      const taskId = row.dataset.taskId;
-      const task   = getState().tasks.find(t => t.id === taskId);
+      const task = getState().tasks.find(t => t.id === row.dataset.taskId);
       if (task) openTaskForm(task);
     });
   });
 
-  el.querySelectorAll(".project-chip").forEach(chip => {
-    chip.addEventListener("click", () => {
-      const id = chip.dataset.projectId;
-      document.querySelector(`[data-view="projects"]`).click();
-      // Will be picked up by the projects view
-      window.__selectedProjectId = id;
-    });
-  });
 }
 
-function taskRow(task, categories, showTime = false) {
-  const cat  = categories.find(c => c.id === task.categoryId);
-  const due  = fromTs(task.dueDate);
+function taskRow(task, showTime = false, showScheduledDate = false) {
+  const { projects } = getState();
+  const project = projects.find(p => p.id === task.projectId);
+  const stage   = project?.stages?.find(s => s.id === task.stageId);
+  const due    = fromTs(task.dueDate);
   const sStart = fromTs(task.scheduledStart);
+
+  let schedMeta = "";
+  if (showScheduledDate && sStart) {
+    schedMeta = `<span class="task-time">🗓 ${formatDate(sStart)} ${formatTime(sStart)}</span>`;
+  } else if (showTime && sStart) {
+    schedMeta = `<span class="task-time">🕐 ${formatTime(sStart)}</span>`;
+  }
 
   return `
     <div class="task-row" data-task-id="${task.id}">
       <div class="task-row-main">
-        <span class="task-name">${esc(task.name)}</span>
-        ${cat ? categoryChip(cat) : ""}
+        <span class="task-name">${esc(task.name)}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}</span>
         ${priorityBadge(task.priority)}
       </div>
       <div class="task-row-meta">
-        ${showTime && sStart ? `<span class="task-time">🕐 ${formatTime(sStart)}</span>` : ""}
-        ${due ? `<span class="task-due ${due < new Date() ? "overdue" : ""}">📅 ${formatDate(due)}</span>` : ""}
+        ${schedMeta}
+        ${due ? `<span class="task-due ${due < new Date() ? "overdue" : ""}">📅 Due: ${formatDate(due)}</span>` : ""}
         <span class="task-hours">⏱ ${task.estimatedHours}h</span>
         ${task.blockerIds?.length ? `<span class="blocked-badge">🚫 Blocked</span>` : ""}
         ${task.recurring ? `<span class="recurring-badge">🔄</span>` : ""}
+        ${task.schedUnschedulableReason ? `<span class="unschedulable-reason">${unschedulableReasonLabel(task.schedUnschedulableReason)}</span>` : ""}
       </div>
     </div>
   `;
 }
 
-function projectChip(project) {
-  const taskCount = getState().tasks.filter(t => t.projectId === project.id && !t.completed).length;
-  return `
-    <div class="project-chip" data-project-id="${project.id}">
-      <span class="project-chip-name">${esc(project.name)}</span>
-      <span class="project-chip-count">${taskCount} task${taskCount !== 1 ? "s" : ""}</span>
-    </div>
-  `;
+
+function unschedulableReasonLabel(reason) {
+  if (reason === "blocker_beyond_horizon") return "⛓ Blocker scheduled beyond 60-day window";
+  if (reason === "blocker_unschedulable")  return "⛓ Blocked by an unschedulable task";
+  return "📅 Not enough free time in the next 60 days";
 }
 
 function formatTime(date) {
