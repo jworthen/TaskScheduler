@@ -1,64 +1,65 @@
-# Stitch & Schedule — Roadmap
+# Slightly Biased Scheduler — Roadmap
 
 A web-based task scheduler for a solo quilting pattern design business.
-Single-user, browser-only, powered by Google Firestore. No backend server.
+Single-user, browser-only. Task data lives in Trello; scheduling metadata
+and settings are stored in localStorage. No backend server.
 
 ---
 
 ## ✅ Phase 1 — Core App (complete)
 
-- [x] Data model: Projects, Tasks, Settings in Firestore
-- [x] Firestore CRUD layer with real-time listeners
-- [x] Recurring tasks: auto-spawn next occurrence on completion
-- [x] Blocker enforcement: hard-block tasks with incomplete dependencies
+- [x] Trello integration: boards → projects, lists → stages, cards → tasks
+- [x] Trello OAuth flow: API key + token stored in localStorage
+- [x] Per-board import filtering (choose which boards to load)
 - [x] Scheduling engine: work-backward from due date, latest-possible-slot placement
-      respecting configured working hours and Google Calendar busy blocks
-- [x] Priority ordering: High → Medium → Low as tiebreaker
-- [x] Dashboard: stats (due this week, hours today, blocked count, overdue)
-- [x] Weekly view: 7-day calendar grid, drag-and-drop rescheduling
-- [x] Daily Focus view: timeline with progress bar, mark-complete toggle
-- [x] Project Kanban: per-project stage columns, drag tasks between stages
-- [x] All Tasks list: filterable/sortable table with inline actions
-- [x] Settings: working hours per day, category management, scheduler trigger
-- [x] Google Calendar OAuth (read-only) plumbing
-- [x] Soft lavender/peach design system, Nunito font
+- [x] Split-task scheduling: tasks too long for one slot are spread across multiple blocks
+- [x] Soft due dates: if no slot before deadline, schedule at earliest slot after it
+- [x] Blocker enforcement: topological sort ensures dependencies are scheduled first
+- [x] Priority ordering: High → Medium → Low as tiebreaker (override Trello label)
+- [x] Working hours config: per-day-of-week start/end times
+- [x] Time slot types: named colour bands (Morning, Afternoon, Evening) on calendar
+- [x] Google Calendar OAuth (read-only): busy blocks excluded from scheduling
+- [x] Dashboard: due this week, hours today, overdue, blocked, scheduled-past-due
+- [x] Weekly view: 7-day grid, drag-and-drop rescheduling, unschedule drop zone
+- [x] Daily Focus view: timeline with progress bar, split-block display
+- [x] All Tasks list: filterable table, open-in-Trello links
+- [x] Settings: Trello connection, working hours, time slots, scheduler, calendar
+- [x] Scheduling metadata persisted to localStorage (survives page refresh)
 
 ---
 
-## 🔨 Phase 2 — Mobile & Deployment (in progress)
+## ✅ Phase 2 — Mobile & Deployment (complete)
 
-- [ ] Responsive layout: sidebar collapses to bottom navigation bar on mobile
-- [ ] Touch-friendly tap targets (min 44 × 44 px throughout)
-- [ ] Kanban board: horizontal scroll on small screens
-- [ ] Weekly grid: horizontally scrollable, single-day highlight on mobile
-- [ ] Modals: full-screen on small screens
-- [ ] Firebase Hosting config (`firebase.json`, `.firebaserc`)
-- [ ] Deployment instructions (one `firebase deploy` command)
-- [ ] Real HTTPS URL → add to phone home screen as PWA shortcut
+- [x] Responsive layout: sidebar hidden on mobile, fixed bottom nav bar
+- [x] Touch-friendly tap targets (min 44 × 44 px)
+- [x] Weekly grid: horizontally scrollable on small screens
+- [x] Modals: slide up as bottom sheet on mobile
+- [x] Safe-area padding for iOS home indicator
+- [x] Deployed to GitHub Pages (auto-deploys on push to main)
+- [x] Works as add-to-home-screen shortcut on iOS and Android
 
 ---
 
-## 📋 Phase 3 — Polish & Real-world Use
+## 🔨 Phase 3 — Polish & Real-world Use (up next)
 
-- [ ] Test with real quilting projects; fix rough edges
-- [ ] Auto-run scheduler when a task is created or its due date changes
-- [ ] First-time onboarding: prompt to create first project if none exist
-- [ ] Better empty states with helpful call-to-action prompts
-- [ ] Keyboard shortcuts (N = new task, P = new project, S = settings, ←/→ week nav)
-- [ ] Confirm-before-delete with undo toast (5-second window)
-- [ ] Task search / quick-open (Cmd+K style)
+- [ ] Auto-refresh Trello data when the app regains focus (returning from Trello)
+- [ ] Auto-run scheduler after a manual Trello refresh
+- [ ] First-run onboarding: clear prompt to connect Trello if not yet connected
+- [ ] Better empty states: helpful nudges when no tasks are scheduled for a day
+- [ ] Keyboard shortcuts: ←/→ week/day navigation, S = settings, R = run scheduler
+- [ ] "Add to home screen" prompt/banner for first-time mobile visitors
+- [ ] Trello connection persists across devices via URL token (optional QR flow)
 
 ---
 
 ## 💡 Phase 4 — Nice-to-haves
 
-- [ ] Offline support: explicit service worker so the app loads without internet
-      (Firestore already caches reads; this covers the shell/JS assets)
-- [ ] Export tasks to CSV
-- [ ] Print-friendly Daily Focus view (clean single-column layout)
-- [ ] Color-coded project indicators in calendar views
-- [ ] Bulk actions in All Tasks (complete many, move to stage, reassign category)
-- [ ] Stage completion percentage ring on Project tab buttons
+- [ ] Offline support: service worker to cache app shell so it loads without internet
+- [ ] Export scheduled week to CSV or printable view
+- [ ] Print-friendly Daily Focus view
+- [ ] Color-coded project indicators in calendar views (by Trello board colour)
+- [ ] Bulk scheduling actions in All Tasks (set estimated hours for many cards at once)
+- [ ] "Reschedule all" button that clears auto-scheduled slots and reruns the scheduler
 
 ---
 
@@ -68,4 +69,4 @@ Single-user, browser-only, powered by Google Firestore. No backend server.
 - Multi-user / team features
 - Native mobile app
 - Backend server
-- Writing to Google Calendar
+- Writing to Google Calendar or Trello
