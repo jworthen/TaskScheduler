@@ -48,16 +48,40 @@ and settings are stored in localStorage. No backend server.
 - [ ] Better empty states: helpful nudges when no tasks are scheduled for a day
 - [ ] Keyboard shortcuts: ←/→ week/day navigation, S = settings, R = run scheduler
 - [ ] "Add to home screen" prompt/banner for first-time mobile visitors
-- [ ] Trello connection persists across devices via URL token (optional QR flow)
+- [ ] Work slot preferences enforced in scheduler (UI and storage already built)
+- [ ] Project timeline view: Gantt-style, one row per Trello board, tasks laid out in time
 
 ---
 
-## 💡 Phase 4 — Nice-to-haves
+## 🎨 Phase 4 — Visual Redesign
+
+Full redesign using Slightly Biased Quilts branding colors and a quilting-inspired aesthetic.
+
+**Palette**
+- Navy (`#3D4BB5`) — sidebar, headers, primary buttons
+- Teal (`#1FA8B4`) — interactive elements, links, active nav (matches logo "QUILTS" color)
+- Charcoal (`#555B5F`) — body text (matches logo typography)
+- White — primary background
+- Chartreuse/lime — progress bars, scheduled blocks, in-progress indicators
+- Hot pink — overdue, high priority
+- Yellow — medium priority, warnings
+- Ice blue — low priority, secondary backgrounds
+
+**UI direction**
+- [ ] Apply brand color palette consistently across all views
+- [ ] Navy sidebar replaces current sidebar treatment
+- [ ] Functional color assignments for priority and task status badges
+- [ ] Subtle quilt-block geometric motifs (chevron/diamond) in empty states and sidebar header
+- [ ] Color-coded project indicators in calendar using full brand palette (one color per Trello board)
+- [ ] Dark mode toggle (built on top of redesigned light theme)
+
+---
+
+## 💡 Phase 5 — Nice-to-haves
 
 - [ ] Offline support: service worker to cache app shell so it loads without internet
 - [ ] Export scheduled week to CSV or printable view
 - [ ] Print-friendly Daily Focus view
-- [ ] Color-coded project indicators in calendar views (by Trello board colour)
 - [ ] Bulk scheduling actions in All Tasks (set estimated hours for many cards at once)
 - [ ] "Reschedule all" button that clears auto-scheduled slots and reruns the scheduler
 
