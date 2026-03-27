@@ -49,7 +49,6 @@ and settings are stored in localStorage. No backend server.
 - [ ] Keyboard shortcuts: ←/→ week/day navigation, S = settings, R = run scheduler
 - [ ] "Add to home screen" prompt/banner for first-time mobile visitors
 - [ ] Work slot preferences enforced in scheduler (UI and storage already built)
-- [ ] Project timeline view: Gantt-style, one row per Trello board, tasks laid out in time
 
 ---
 
@@ -74,6 +73,7 @@ Full redesign using Slightly Biased Quilts branding colors and a quilting-inspir
 - [ ] Subtle quilt-block geometric motifs (chevron/diamond) in empty states and sidebar header
 - [ ] Color-coded project indicators in calendar using full brand palette (one color per Trello board)
 - [ ] Dark mode toggle (built on top of redesigned light theme)
+- [ ] Project timeline view: Gantt-style, one row per Trello board, tasks laid out in time
 
 ---
 
