@@ -59,7 +59,7 @@ export function renderDashboard() {
 
   el.innerHTML = `
     <div class="view-header">
-      <h2>Dashboard 🏠</h2>
+      <h2>Dashboard</h2>
     </div>
 
     <!-- Stats row -->
@@ -84,21 +84,21 @@ export function renderDashboard() {
 
     ${overdue.length ? `
     <section class="dash-section">
-      <h3 class="section-title danger-title">⚠️ Overdue</h3>
+      <h3 class="section-title danger-title">Overdue</h3>
       <div class="task-list">
         ${overdue.map(t => taskRow(t)).join("")}
       </div>
     </section>` : ""}
 
     <section class="dash-section">
-      <h3 class="section-title">☀️ Today's schedule</h3>
+      <h3 class="section-title">Today's schedule</h3>
       ${todayTasks.length
         ? `<div class="task-list">${todayTasks.map(t => taskRow(t, true)).join("")}</div>`
         : `<p class="empty-state">No tasks scheduled for today</p>`}
     </section>
 
     <section class="dash-section">
-      <h3 class="section-title">📅 Due this week</h3>
+      <h3 class="section-title">Due this week</h3>
       ${dueSoon.length
         ? `<div class="task-list">${dueSoon.map(t => taskRow(t)).join("")}</div>`
         : `<p class="empty-state">Nothing due in the next 7 days 🎉</p>`}
@@ -106,7 +106,7 @@ export function renderDashboard() {
 
     ${blocked.length ? `
     <section class="dash-section">
-      <h3 class="section-title">🚫 Blocked</h3>
+      <h3 class="section-title">Blocked</h3>
       <div class="task-list">
         ${blocked.map(t => taskRow(t)).join("")}
       </div>
@@ -114,7 +114,7 @@ export function renderDashboard() {
 
     ${scheduledPastDue.length ? `
     <section class="dash-section">
-      <h3 class="section-title warn-title">⏰ Scheduled past due</h3>
+      <h3 class="section-title warn-title">Scheduled past due</h3>
       <div class="task-list">
         ${scheduledPastDue.map(t => taskRow(t, true, true)).join("")}
       </div>
@@ -122,7 +122,7 @@ export function renderDashboard() {
 
     ${unschedulable.length ? `
     <section class="dash-section">
-      <h3 class="section-title danger-title">❌ Cannot be scheduled</h3>
+      <h3 class="section-title danger-title">Cannot be scheduled</h3>
       <div class="task-list">
         ${unschedulable.map(t => taskRow(t)).join("")}
       </div>
@@ -161,10 +161,10 @@ function taskRow(task, showTime = false, showScheduledDate = false) {
       </div>
       <div class="task-row-meta">
         ${schedMeta}
-        ${due ? `<span class="task-due ${due < new Date() ? "overdue" : ""}">📅 Due: ${formatDate(due)}</span>` : ""}
-        <span class="task-hours">⏱ ${task.estimatedHours}h</span>
-        ${task.blockerIds?.length ? `<span class="blocked-badge">🚫 Blocked</span>` : ""}
-        ${task.recurring ? `<span class="recurring-badge">🔄</span>` : ""}
+        ${due ? `<span class="task-due ${due < new Date() ? "overdue" : ""}">Due: ${formatDate(due)}</span>` : ""}
+        <span class="task-hours">${task.estimatedHours}h</span>
+        ${task.blockerIds?.length ? `<span class="blocked-badge">Blocked</span>` : ""}
+        ${task.recurring ? `<span class="recurring-badge">Recurring</span>` : ""}
         ${task.schedUnschedulableReason ? `<span class="unschedulable-reason">${unschedulableReasonLabel(task.schedUnschedulableReason)}</span>` : ""}
       </div>
     </div>
@@ -173,9 +173,9 @@ function taskRow(task, showTime = false, showScheduledDate = false) {
 
 
 function unschedulableReasonLabel(reason) {
-  if (reason === "blocker_beyond_horizon") return "⛓ Blocker scheduled beyond 60-day window";
-  if (reason === "blocker_unschedulable")  return "⛓ Blocked by an unschedulable task";
-  return "📅 Not enough free time in the next 60 days";
+  if (reason === "blocker_beyond_horizon") return "Blocker scheduled beyond 60-day window";
+  if (reason === "blocker_unschedulable")  return "Blocked by an unschedulable task";
+  return "Not enough free time in the next 60 days";
 }
 
 function formatTime(date) {

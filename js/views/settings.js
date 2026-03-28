@@ -35,7 +35,7 @@ export function renderSettings() {
 
   el.innerHTML = `
     <div class="view-header">
-      <h2>Settings ⚙️</h2>
+      <h2>Settings</h2>
     </div>
 
     <!-- Trello connection -->
@@ -46,7 +46,7 @@ export function renderSettings() {
         Your API key and token are stored only in your browser's localStorage.
       </p>
       <div class="cal-status">
-        Status: <span id="trello-status-text">${connected ? "✅ Connected" : "❌ Not connected"}</span>
+        Status: <span id="trello-status-text">${connected ? "Connected" : "Not connected"}</span>
       </div>
 
       ${connected ? `
@@ -134,8 +134,8 @@ export function renderSettings() {
       <h3>Auto-Scheduler</h3>
       <p class="settings-hint">Automatically place unscheduled Trello cards in the latest available slot before their due date.</p>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-        <button class="btn-primary" id="run-scheduler">🗓 Run auto-scheduler</button>
-        <button class="btn-ghost"   id="reset-blockers">🔗 Reset blocker data</button>
+        <button class="btn-primary" id="run-scheduler">Run auto-scheduler</button>
+        <button class="btn-ghost"   id="reset-blockers">Reset blocker data</button>
       </div>
       <p class="settings-hint" style="margin-top:0.5rem;">
         "Reset blocker data" clears any locally-saved blocker relationships and re-imports them fresh from Trello.
@@ -152,10 +152,10 @@ export function renderSettings() {
         <strong>Read-only</strong> — this app never writes to your calendar.
       </p>
       <div class="cal-status">
-        Status: <span id="cal-status-text">${isCalendarConnected() ? "✅ Connected" : "❌ Not connected"}</span>
+        Status: <span id="cal-status-text">${isCalendarConnected() ? "Connected" : "Not connected"}</span>
       </div>
       <button class="btn-secondary" id="connect-calendar">
-        ${isCalendarConnected() ? "🔄 Reconnect Calendar" : "📆 Connect Google Calendar"}
+        ${isCalendarConnected() ? "Reconnect Calendar" : "Connect Google Calendar"}
       </button>
       <details class="setup-instructions">
         <summary>Setup instructions</summary>
@@ -175,15 +175,15 @@ export function renderSettings() {
     el.querySelector("#trello-refresh").addEventListener("click", async () => {
       const btn = el.querySelector("#trello-refresh");
       btn.disabled = true;
-      btn.textContent = "⏳ Refreshing…";
+      btn.textContent = "Refreshing…";
       try {
         await loadTrelloData();
-        btn.textContent = "⏳ Scheduling…";
+        btn.textContent = "Scheduling…";
         const { scheduled, late, warnings } = await runScheduler();
         rerenderCurrent();
         const lateMsg = late.length ? `, ${late.length} past due` : "";
         const warnMsg = warnings.length ? `, ${warnings.length} unschedulable` : "";
-        toast(`Refreshed & scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}${lateMsg}${warnMsg} 🗓`, "success");
+        toast(`Refreshed & scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}${lateMsg}${warnMsg}`, "success");
       } catch (err) {
         toast("Refresh failed: " + err.message, "error");
       } finally {

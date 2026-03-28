@@ -44,7 +44,7 @@ export function initModal() {
 // ─── Priority badge ──────────────────────────────────────────────────────────
 
 export function priorityBadge(priority) {
-  const map = { high: "🔴 High", medium: "🟡 Medium", low: "🟢 Low" };
+  const map = { high: "High", medium: "Medium", low: "Low" };
   return `<span class="badge badge-priority badge-${priority}">${map[priority] ?? priority}</span>`;
 }
 

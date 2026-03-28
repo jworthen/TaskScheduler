@@ -53,9 +53,9 @@ export function openTaskForm(task) {
           <label>Priority override <span class="hint">(overrides label colour)</span></label>
           <select id="sf-priority">
             <option value="">(use Trello label)</option>
-            <option value="high"   ${task.priority === "high"   ? "selected" : ""}>🔴 High</option>
-            <option value="medium" ${task.priority === "medium" ? "selected" : ""}>🟡 Medium</option>
-            <option value="low"    ${task.priority === "low"    ? "selected" : ""}>🟢 Low</option>
+            <option value="high"   ${task.priority === "high"   ? "selected" : ""}>High</option>
+            <option value="medium" ${task.priority === "medium" ? "selected" : ""}>Medium</option>
+            <option value="low"    ${task.priority === "low"    ? "selected" : ""}>Low</option>
           </select>
         </div>
       </div>
