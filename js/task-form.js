@@ -22,8 +22,7 @@ import { rerenderCurrent } from "./main.js";
 export function openTaskForm(task) {
   if (!task) return;
 
-  const { tasks, settings } = getState();
-  const workSlots = settings?.workSlots ?? [];
+  const { tasks } = getState();
 
   // Other tasks that could be declared as blockers (excluding this one)
   const otherTasks = tasks.filter(t => t.id !== task.id);
@@ -60,17 +59,6 @@ export function openTaskForm(task) {
         </div>
       </div>
 
-      ${workSlots.length ? `
-      <div class="form-row">
-        <label>Preferred time slot <span class="hint">(for scheduling)</span></label>
-        <select id="sf-work-slot">
-          <option value="">— any time —</option>
-          ${workSlots.map(s =>
-            `<option value="${s.id}" ${task.workSlotId === s.id ? "selected" : ""}>${esc(s.name)} (${s.startTime}–${s.endTime})</option>`
-          ).join("")}
-        </select>
-      </div>` : ""}
-
       <div class="form-row">
         <label>Blockers <span class="hint">(cards that must be done first)</span></label>
         ${otherTasks.length
@@ -92,9 +80,8 @@ export function openTaskForm(task) {
   document.getElementById("sched-form").addEventListener("submit", async e => {
     e.preventDefault();
 
-    const hours     = parseFloat(document.getElementById("sf-hours").value) || 1;
-    const priority  = document.getElementById("sf-priority")?.value || null;
-    const workSlotId = document.getElementById("sf-work-slot")?.value || null;
+    const hours    = parseFloat(document.getElementById("sf-hours").value) || 1;
+    const priority = document.getElementById("sf-priority")?.value || null;
 
     const blockerSelect = document.getElementById("sf-blockers");
     const blockerIds = blockerSelect
@@ -104,7 +91,6 @@ export function openTaskForm(task) {
     const patch = {
       estimatedHours: hours,
       blockerIds,
-      workSlotId,
     };
     if (priority) patch.priority = priority;
 
