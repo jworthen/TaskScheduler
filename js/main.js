@@ -64,7 +64,7 @@ export async function loadTrelloData() {
   const cached = getTrelloCache();
   if (cached) {
     setState({ projects: cached.projects, tasks: cached.tasks, trelloConnected: true });
-    rerenderCurrent();
+    runScheduler().then(() => rerenderCurrent());
   }
 
   try {
@@ -89,6 +89,7 @@ export async function loadTrelloData() {
 
     setState({ projects, tasks, loading: false, trelloConnected: true });
     setTrelloCache(projects, tasks);
+    await runScheduler();
     rerenderCurrent();
   } catch (err) {
     setState({ loading: false });
