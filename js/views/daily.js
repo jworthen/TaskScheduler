@@ -100,6 +100,11 @@ export function renderDaily() {
   });
 }
 
+export function navigateDay(delta) {
+  dayOffset += delta;
+  renderDaily();
+}
+
 function dailyTaskCard({ task, start, end, blockIndex, totalBlocks }) {
   const project = getState().projects.find(p => p.id === task.projectId);
   const stage   = project?.stages?.find(s => s.id === task.stageId);

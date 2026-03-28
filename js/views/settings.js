@@ -178,7 +178,12 @@ export function renderSettings() {
       btn.textContent = "⏳ Refreshing…";
       try {
         await loadTrelloData();
-        toast("Boards and cards refreshed! 🔄", "success");
+        btn.textContent = "⏳ Scheduling…";
+        const { scheduled, late, warnings } = await runScheduler();
+        rerenderCurrent();
+        const lateMsg = late.length ? `, ${late.length} past due` : "";
+        const warnMsg = warnings.length ? `, ${warnings.length} unschedulable` : "";
+        toast(`Refreshed & scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}${lateMsg}${warnMsg} 🗓`, "success");
       } catch (err) {
         toast("Refresh failed: " + err.message, "error");
       } finally {

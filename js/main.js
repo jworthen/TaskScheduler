@@ -18,8 +18,8 @@ import {
 
 import { runScheduler }    from "./scheduler.js";
 import { renderDashboard } from "./views/dashboard.js";
-import { renderWeekly }    from "./views/weekly.js";
-import { renderDaily }     from "./views/daily.js";
+import { renderWeekly, navigateWeek } from "./views/weekly.js";
+import { renderDaily, navigateDay }   from "./views/daily.js";
 import { renderTasks }     from "./views/tasks.js";
 import { renderSettings }  from "./views/settings.js";
 
@@ -158,6 +158,48 @@ async function init() {
 
   // Refresh Trello data every 15 minutes
   setInterval(loadTrelloData, 15 * 60 * 1000);
+
+  // Auto-refresh when the user returns to the tab after 30+ minutes away
+  let hiddenAt = null;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      hiddenAt = Date.now();
+    } else if (hiddenAt && Date.now() - hiddenAt >= 30 * 60 * 1000) {
+      hiddenAt = null;
+      loadTrelloData();
+    } else {
+      hiddenAt = null;
+    }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener("keydown", e => {
+    // Don't fire when typing in an input or while a modal is open
+    if (e.target.matches("input, textarea, select")) return;
+    if (!document.getElementById("modal-overlay").classList.contains("hidden")) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    const { currentView } = getState();
+
+    switch (e.key) {
+      case "ArrowLeft":
+        if (currentView === "weekly") { e.preventDefault(); navigateWeek(-1); }
+        if (currentView === "daily")  { e.preventDefault(); navigateDay(-1); }
+        break;
+      case "ArrowRight":
+        if (currentView === "weekly") { e.preventDefault(); navigateWeek(1); }
+        if (currentView === "daily")  { e.preventDefault(); navigateDay(1); }
+        break;
+      case "s":
+        switchView("settings");
+        break;
+      case "r": {
+        const btn = document.getElementById("btn-run-scheduler");
+        btn?.click();
+        break;
+      }
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", init);
