@@ -144,7 +144,7 @@ export function renderDashboard() {
     </div>
 
     <!-- ── RADAR ZONE ─────────────────────────────────────────── -->
-    ${(overdue.length || dueSoon.length || blocked.length || scheduledPastDue.length || unschedulable.length) ? `
+    ${(overdue.length || dueSoon.length || blocked.length) ? `
     <div class="dash-zone">
       <div class="dash-zone-label">On your radar</div>
 
@@ -164,18 +164,6 @@ export function renderDashboard() {
       <section class="dash-section">
         <h3 class="section-title warn-title">Blocked</h3>
         <div class="task-list">${blocked.map(t => taskRow(t, projects)).join("")}</div>
-      </section>` : ""}
-
-      ${scheduledPastDue.length ? `
-      <section class="dash-section">
-        <h3 class="section-title warn-title">Scheduled past due</h3>
-        <div class="task-list">${scheduledPastDue.map(t => taskRow(t, projects, true, false, true)).join("")}</div>
-      </section>` : ""}
-
-      ${unschedulable.length ? `
-      <section class="dash-section">
-        <h3 class="section-title danger-title">Cannot be scheduled</h3>
-        <div class="task-list">${unschedulable.map(t => taskRow(t, projects)).join("")}</div>
       </section>` : ""}
     </div>` : `
     <div class="dash-zone">

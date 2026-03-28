@@ -20,7 +20,7 @@ import {
 import { runScheduler }    from "./scheduler.js";
 import { renderDashboard } from "./views/dashboard.js";
 import { renderWeekly, navigateWeek } from "./views/weekly.js";
-import { renderDaily, navigateDay }   from "./views/daily.js";
+import { renderDaily }                 from "./views/daily.js";
 import { renderTasks }     from "./views/tasks.js";
 import { renderSettings }  from "./views/settings.js";
 
@@ -193,11 +193,9 @@ async function init() {
     switch (e.key) {
       case "ArrowLeft":
         if (currentView === "weekly") { e.preventDefault(); navigateWeek(-1); }
-        if (currentView === "daily")  { e.preventDefault(); navigateDay(-1); }
         break;
       case "ArrowRight":
         if (currentView === "weekly") { e.preventDefault(); navigateWeek(1); }
-        if (currentView === "daily")  { e.preventDefault(); navigateDay(1); }
         break;
       case "s":
         switchView("settings");
