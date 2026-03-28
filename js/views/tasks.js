@@ -18,7 +18,7 @@ export function renderTasks() {
 
   el.innerHTML = `
     <div class="view-header">
-      <h2>All Cards ✅</h2>
+      <h2>All Cards</h2>
       <div class="header-actions">
         <span class="settings-hint" style="font-size:0.85rem;">Add cards in Trello, then refresh here</span>
       </div>
@@ -32,9 +32,9 @@ export function renderTasks() {
       </select>
       <select id="filter-priority">
         <option value="">All priorities</option>
-        <option value="high">🔴 High</option>
-        <option value="medium">🟡 Medium</option>
-        <option value="low">🟢 Low</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
       </select>
       <select id="filter-status">
         <option value="active">Active</option>

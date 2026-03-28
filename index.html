@@ -12,32 +12,24 @@
     <!-- Sidebar -->
     <nav id="sidebar">
       <div class="sidebar-header">
-        <span class="logo">🧵</span>
-        <h1>Slightly Biased Scheduler</h1>
+        <div class="sidebar-brand">
+          <span class="brand-eyebrow">Slightly Biased</span>
+          <span class="brand-title">Scheduler</span>
+        </div>
       </div>
       <ul class="nav-links">
-        <li><a href="#" data-view="dashboard" class="active">
-          <span class="nav-icon">🏠</span> Dashboard
-        </a></li>
-        <li><a href="#" data-view="weekly">
-          <span class="nav-icon">📅</span> Weekly View
-        </a></li>
-        <li><a href="#" data-view="daily">
-          <span class="nav-icon">☀️</span> Daily Focus
-        </a></li>
-<li><a href="#" data-view="tasks">
-          <span class="nav-icon">✅</span> All Tasks
-        </a></li>
-        <li><a href="#" data-view="settings">
-          <span class="nav-icon">⚙️</span> Settings
-        </a></li>
+        <li><a href="#" data-view="dashboard" class="active">Dashboard</a></li>
+        <li><a href="#" data-view="weekly">Weekly View</a></li>
+        <li><a href="#" data-view="daily">Daily Focus</a></li>
+        <li><a href="#" data-view="tasks">All Cards</a></li>
+        <li><a href="#" data-view="settings">Settings</a></li>
       </ul>
       <div class="sidebar-footer">
         <button id="btn-run-scheduler" class="btn-secondary btn-sm" title="Run auto-scheduler">
-          🗓 Run Scheduler
+          Run Scheduler
         </button>
         <button id="btn-connect-calendar" class="btn-secondary btn-sm" title="Connect Google Calendar">
-          📆 Connect Calendar
+          Connect Calendar
         </button>
       </div>
     </nav>
@@ -45,23 +37,18 @@
   <!-- Mobile bottom nav (hidden on desktop) -->
   <nav id="mobile-nav">
     <a href="#" data-view="dashboard" class="mobile-nav-item active">
-      <span class="mobile-nav-icon">🏠</span>
       <span class="mobile-nav-label">Home</span>
     </a>
     <a href="#" data-view="weekly" class="mobile-nav-item">
-      <span class="mobile-nav-icon">📅</span>
       <span class="mobile-nav-label">Weekly</span>
     </a>
     <a href="#" data-view="daily" class="mobile-nav-item">
-      <span class="mobile-nav-icon">☀️</span>
       <span class="mobile-nav-label">Today</span>
     </a>
     <a href="#" data-view="tasks" class="mobile-nav-item">
-      <span class="mobile-nav-icon">✅</span>
-      <span class="mobile-nav-label">Tasks</span>
+      <span class="mobile-nav-label">Cards</span>
     </a>
     <a href="#" data-view="settings" class="mobile-nav-item">
-      <span class="mobile-nav-icon">⚙️</span>
       <span class="mobile-nav-label">Settings</span>
     </a>
   </nav>
@@ -70,7 +57,7 @@
     <main id="main-content">
       <!-- Config banner (shown when Trello is not connected) -->
       <div id="config-banner" class="banner banner-warn" style="display:none;">
-        <strong>🔗 Trello not connected.</strong>
+        <strong>Trello not connected.</strong>
         Connect your Trello account to load boards and cards.
         <a href="#" data-view="settings">Go to Settings</a>
       </div>

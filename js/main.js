@@ -108,18 +108,18 @@ async function init() {
   const schedulerBtn = document.getElementById("btn-run-scheduler");
   schedulerBtn?.addEventListener("click", async () => {
     schedulerBtn.disabled = true;
-    schedulerBtn.textContent = "⏳ Scheduling…";
+    schedulerBtn.textContent = "Scheduling…";
     try {
       const { scheduled, late, warnings } = await runScheduler();
       rerenderCurrent();
       const lateMsg = late.length ? `, ${late.length} past due` : "";
       const warnMsg = warnings.length ? `, ${warnings.length} unschedulable` : "";
-      toast(`Scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}${lateMsg}${warnMsg} 🗓`, "success");
+      toast(`Scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}${lateMsg}${warnMsg}`, "success");
     } catch (err) {
       toast("Scheduler error: " + err.message, "error");
     } finally {
       schedulerBtn.disabled = false;
-      schedulerBtn.textContent = "🗓 Run Scheduler";
+      schedulerBtn.textContent = "Run Scheduler";
     }
   });
 
@@ -130,7 +130,7 @@ async function init() {
     if (pendingKey) {
       saveCredentials(pendingKey, urlToken);
       localStorage.removeItem("trello_key_pending");
-      toast("Trello connected! 🎉", "success");
+      toast("Trello connected!", "success");
     }
   }
 

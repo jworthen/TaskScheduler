@@ -32,7 +32,7 @@ export function renderWeekly() {
 
   el.innerHTML = `
     <div class="view-header">
-      <h2>Weekly View 📅</h2>
+      <h2>Weekly View</h2>
       <div class="header-actions">
         <button class="btn-ghost" id="wk-prev">← Prev</button>
         <span class="wk-range">${formatDateShort(weekStart)} – ${formatDateShort(days[6])}</span>
@@ -73,7 +73,7 @@ export function renderWeekly() {
 
     <!-- Unscheduled task list -->
     <section class="unscheduled-section">
-      <h3 class="section-title">📋 Unscheduled tasks
+      <h3 class="section-title">Unscheduled tasks
         <span class="unschedule-hint">— drag scheduled tasks here to remove from calendar</span>
       </h3>
       <div class="unscheduled-list" id="unscheduled-drop-zone">

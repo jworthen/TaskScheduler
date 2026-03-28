@@ -49,7 +49,7 @@ export function renderDaily() {
 
   el.innerHTML = `
     <div class="view-header">
-      <h2>Daily Focus ☀️</h2>
+      <h2>Daily Focus</h2>
       <div class="header-actions">
         <button class="btn-ghost" id="df-prev">← Prev</button>
         <span class="day-label">${dateLabel}</span>
@@ -75,7 +75,6 @@ export function renderDaily() {
       ${dayEntries.length
         ? dayEntries.map(entry => dailyTaskCard(entry)).join("")
         : `<div class="empty-state">
-             <div class="empty-icon">🌸</div>
              <p>No tasks scheduled for ${dateLabel}.</p>
              <p class="empty-hint">Run the auto-scheduler in Settings, or drag cards in the Weekly view.</p>
            </div>`
@@ -122,17 +121,17 @@ function dailyTaskCard({ task, start, end, blockIndex, totalBlocks }) {
       <div class="daily-card-body">
         <div class="daily-card-header">
           <span class="task-name ${task.completed ? "strikethrough" : ""}">${esc(task.name)}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}</span>
-          <span class="complete-indicator">${task.completed ? "✅" : "⬜"}</span>
+          <span class="complete-dot ${task.completed ? "complete-dot--done" : ""}"></span>
         </div>
         <div class="daily-card-meta">
           ${priorityBadge(task.priority)}
           ${isSplit
-            ? `<span class="task-hours">⏱ ${blockHours}h</span><span class="split-badge">Part ${blockIndex + 1} of ${totalBlocks}</span>`
-            : `<span class="task-hours">⏱ ${task.estimatedHours}h</span>`}
-          ${task.recurring ? `<span class="recurring-badge">🔄 Recurring</span>` : ""}
+            ? `<span class="task-hours">${blockHours}h</span><span class="split-badge">Part ${blockIndex + 1} of ${totalBlocks}</span>`
+            : `<span class="task-hours">${task.estimatedHours}h</span>`}
+          ${task.recurring ? `<span class="recurring-badge">Recurring</span>` : ""}
         </div>
         ${task.notes ? `<div class="daily-card-notes">${esc(task.notes)}</div>` : ""}
-        ${task.blockerIds?.length ? `<div class="blocker-warning">🚫 Has blockers</div>` : ""}
+        ${task.blockerIds?.length ? `<div class="blocker-warning">Has blockers</div>` : ""}
       </div>
     </div>
   `;
@@ -149,7 +148,7 @@ function buildBlockedWarning(tasks) {
   if (!warnTasks.length) return "";
   return `
     <div class="schedule-warning">
-      <strong>⚠️ ${warnTasks.length} task${warnTasks.length > 1 ? "s" : ""} due soon but not scheduled.</strong>
+      <strong>${warnTasks.length} task${warnTasks.length > 1 ? "s" : ""} due soon but not scheduled.</strong>
       Check for blockers or run the auto-scheduler.
     </div>
   `;
