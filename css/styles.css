@@ -153,6 +153,10 @@ a:hover { text-decoration: underline; }
   gap: 0;
 }
 
+/* Cap all view content so lines don't stretch absurdly wide */
+.view > * { max-width: 1080px; }
+.view > .dash-columns { max-width: 1080px; }
+
 .view { display: none; flex-direction: column; gap: 20px; }
 .view.active { display: flex; }
 
@@ -275,6 +279,19 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .stat-warn   .stat-value { color: var(--accent); }
 .stat-danger { border-top-color: var(--red); }
 .stat-danger .stat-value { color: var(--red); }
+
+/* ─── Dashboard two-column layout ───────────────────────── */
+.dash-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 40px;
+  align-items: start;
+}
+
+/* Collapse to single column on narrower viewports */
+@media (max-width: 960px) {
+  .dash-columns { grid-template-columns: 1fr; }
+}
 
 /* ─── Dashboard zones ────────────────────────────────────── */
 .dash-zone {
