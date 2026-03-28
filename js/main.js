@@ -158,13 +158,12 @@ async function init() {
     return;
   }
 
-  // Load boards + cards from Trello
-  await loadTrelloData();
-
-  // Google Calendar (non-blocking — optional integration)
-  await initCalendar().catch(() => {});
-
+  // Show the dashboard immediately, then load data in the background.
+  // loadTrelloData renders cached data first (instant), then re-renders
+  // when the fresh Trello fetch completes.
   switchView("dashboard");
+  loadTrelloData();
+  initCalendar().catch(() => {});
 
   // Refresh Trello data every 15 minutes
   setInterval(loadTrelloData, 15 * 60 * 1000);
