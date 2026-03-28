@@ -98,7 +98,6 @@ function applyFilters(el) {
     <table class="task-table">
       <thead>
         <tr>
-          <th>Done</th>
           <th>Card</th>
           <th>Board</th>
           <th>Priority</th>
@@ -143,7 +142,6 @@ function taskRow(task, blockedIds) {
 
   return `
     <tr data-task-id="${task.id}" class="${task.completed ? "row-completed" : ""} ${isBlocked ? "row-blocked" : ""}">
-      <td>${task.completed ? "✅" : "⬜"}</td>
       <td class="task-name-cell">
         ${esc(task.name)}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}
         ${isBlocked ? ` <span class="blocked-badge">🚫</span>` : ""}
