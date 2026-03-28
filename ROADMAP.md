@@ -1,6 +1,6 @@
-# Slightly Biased Scheduler — Roadmap
+# Pattern Planner — Roadmap
 
-A web-based task scheduler for a solo quilting pattern design business.
+A web-based task scheduler for a solo quilting pattern design business (Slightly Biased Quilts).
 Single-user, browser-only. Task data lives in Trello; scheduling metadata
 and settings are stored in localStorage. No backend server.
 
@@ -18,10 +18,8 @@ and settings are stored in localStorage. No backend server.
 - [x] Priority ordering: High → Medium → Low as tiebreaker (override Trello label)
 - [x] Working hours config: per-day-of-week start/end times
 - [x] Google Calendar OAuth (read-only): busy blocks excluded from scheduling
-- [x] Dashboard: due this week, hours today, overdue, blocked, scheduled-past-due
 - [x] Weekly view: 7-day grid, drag-and-drop rescheduling, unschedule drop zone
-- [x] Daily Focus view: timeline with progress bar, split-block display
-- [x] All Tasks list: filterable table, open-in-Trello links
+- [x] All Cards list: filterable table, open-in-Trello links
 - [x] Settings: Trello connection, working hours, scheduler, calendar
 - [x] Scheduling metadata persisted to localStorage (survives page refresh)
 
@@ -43,41 +41,39 @@ and settings are stored in localStorage. No backend server.
 
 - [x] Auto-refresh Trello data when the app regains focus (returning from Trello)
 - [x] Auto-run scheduler after a manual Trello refresh
-- [x] Keyboard shortcuts: ←/→ week/day navigation, S = settings, R = run scheduler
+- [x] Keyboard shortcuts: ←/→ week navigation, S = settings, R = run scheduler
+- [x] Instant load from localStorage cache; background Trello refresh
 
 ---
 
-## 🎨 Phase 4 — Visual Redesign
+## ✅ Phase 4 — Visual Redesign & UX (complete)
 
-Full redesign using Slightly Biased Quilts branding colors and a quilting-inspired aesthetic.
-
-**Palette**
-- Navy (`#3D4BB5`) — sidebar, headers, primary buttons
-- Teal (`#1FA8B4`) — interactive elements, links, active nav (matches logo "QUILTS" color)
-- Charcoal (`#555B5F`) — body text (matches logo typography)
-- White — primary background
-- Chartreuse/lime — progress bars, scheduled blocks, in-progress indicators
-- Hot pink — overdue, high priority
-- Yellow — medium priority, warnings
-- Ice blue — low priority, secondary backgrounds
-
-**UI direction**
-- [x] Apply brand color palette consistently across all views
-- [x] Navy sidebar replaces current sidebar treatment
-- [x] Functional color assignments for priority and task status badges
-- [x] Subtle quilt-block geometric motifs (chevron/diamond) in sidebar header
-- [ ] Color-coded project indicators in calendar using full brand palette (one color per Trello board)
-- [ ] Dark mode toggle (built on top of redesigned light theme)
-- [ ] Project timeline view: Gantt-style, one row per Trello board, tasks laid out in time
+- [x] Brand color palette: navy sidebar, teal accents, charcoal text
+- [x] Sidebar brand identity: "Slightly Biased / Pattern Planner" with quilt diamond motif
+- [x] Functional color badges for priority and task status
+- [x] Emoji removed throughout; clean typographic UI
+- [x] App renamed to Pattern Planner
+- [x] Dashboard: greeting headline, two-zone layout (Today / On your radar)
+- [x] Dashboard: project color strips on task rows (brand palette, one color per board)
+- [x] Dashboard: smart stat cards (green when all-clear, amber/red when action needed)
+- [x] Dashboard: "Completed today" column powered by Trello dueComplete + dateLastActivity
+- [x] Dashboard: two-column layout on wide screens, single column on mobile
+- [x] All Cards: sorted overdue-first by priority, then by due date
+- [x] Focus for Today: top-3 task cards with priority-based selection algorithm
+- [x] Focus for Today: completed-today column; always anchored to today
+- [x] Content max-width cap (1080px) across all views
 
 ---
 
 ## 💡 Phase 5 — Nice-to-haves
 
-- [ ] Offline support: service worker to cache app shell so it loads without internet
+- [ ] Project color strips in the weekly calendar (matches dashboard/focus colors)
+- [ ] Dark mode toggle
+- [ ] Project timeline view: Gantt-style, one row per Trello board
+- [ ] Offline support: service worker to cache app shell
 - [ ] Export scheduled week to CSV or printable view
-- [ ] Print-friendly Daily Focus view
-- [ ] Bulk scheduling actions in All Tasks (set estimated hours for many cards at once)
+- [ ] Print-friendly Focus for Today view
+- [ ] Bulk hour-setting in All Cards (set estimated hours for many cards at once)
 - [ ] "Reschedule all" button that clears auto-scheduled slots and reruns the scheduler
 
 ---
