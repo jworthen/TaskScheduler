@@ -87,6 +87,7 @@ export function renderWeekly() {
   el.querySelector("#wk-next").addEventListener("click", () => { weekOffset++; renderWeekly(); });
   el.querySelector("#wk-today").addEventListener("click", () => { weekOffset = 0; renderWeekly(); });
 
+
   // Task click → edit
   el.querySelectorAll(".week-task-block").forEach(block => {
     block.addEventListener("click", e => {
@@ -314,6 +315,11 @@ function initDragDrop(container) {
       renderWeekly();
     });
   }
+}
+
+export function navigateWeek(delta) {
+  weekOffset += delta;
+  renderWeekly();
 }
 
 function formatDateShort(date) {
