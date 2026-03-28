@@ -17,13 +17,12 @@ and settings are stored in localStorage. No backend server.
 - [x] Blocker enforcement: topological sort ensures dependencies are scheduled first
 - [x] Priority ordering: High → Medium → Low as tiebreaker (override Trello label)
 - [x] Working hours config: per-day-of-week start/end times
-- [x] Time slot types: named colour bands (Morning, Afternoon, Evening) on calendar
 - [x] Google Calendar OAuth (read-only): busy blocks excluded from scheduling
 - [x] Dashboard: due this week, hours today, overdue, blocked, scheduled-past-due
 - [x] Weekly view: 7-day grid, drag-and-drop rescheduling, unschedule drop zone
 - [x] Daily Focus view: timeline with progress bar, split-block display
 - [x] All Tasks list: filterable table, open-in-Trello links
-- [x] Settings: Trello connection, working hours, time slots, scheduler, calendar
+- [x] Settings: Trello connection, working hours, scheduler, calendar
 - [x] Scheduling metadata persisted to localStorage (survives page refresh)
 
 ---
@@ -45,7 +44,6 @@ and settings are stored in localStorage. No backend server.
 - [x] Auto-refresh Trello data when the app regains focus (returning from Trello)
 - [x] Auto-run scheduler after a manual Trello refresh
 - [x] Keyboard shortcuts: ←/→ week/day navigation, S = settings, R = run scheduler
-- [x] Work slot preferences enforced in scheduler (UI and storage already built)
 
 ---
 

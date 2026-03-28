@@ -28,12 +28,6 @@ export function toTs(val) {
 
 // ─── Default settings ─────────────────────────────────────────────────────────
 
-export const DEFAULT_WORK_SLOTS = [
-  { id: "morning",   name: "Morning",   startTime: "09:00", endTime: "12:00", color: "#f0e557", days: [1,2,3,4,5] },
-  { id: "afternoon", name: "Afternoon", startTime: "13:00", endTime: "17:00", color: "#54c5ba", days: [1,2,3,4,5] },
-  { id: "evening",   name: "Evening",   startTime: "18:00", endTime: "21:00", color: "#a02cb4", days: [1,2,3,4,5,6,0] },
-];
-
 const DEFAULT_WORKING_HOURS = {
   0: null,
   1: { start: "09:00", end: "17:00" },
@@ -55,7 +49,6 @@ export function loadSettings() {
   } catch {}
   return {
     workingHours:      DEFAULT_WORKING_HOURS,
-    workSlots:         DEFAULT_WORK_SLOTS,
     calendarConnected: false,
   };
 }

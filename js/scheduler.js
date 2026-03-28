@@ -22,25 +22,19 @@ const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
 /**
  * Build a list of available time slots for a given date range.
- * When workSlots are configured they take precedence over workingHours so that
- * the scheduler uses the exact same time windows shown in the weekly view
- * (including lunch gaps, evening blocks, etc.).  One slot entry is created per
- * (day × workSlot interval); falls back to one entry per (day × workingHours)
- * when workSlots is empty.
  * @param {Date}   from
  * @param {Date}   to
  * @param {object} workingHours — { 0: null | {start,end}, 1: ..., ... }
  * @param {Array}  busyBlocks   — [{ start: Date, end: Date }, ...]
- * @param {Array}  workSlots    — settings.workSlots (may be empty)
  * @returns {Array<{start:Date, end:Date, freeMinutes:number, dayBusy:Array}>}
  */
-export function buildAvailableSlots(from, to, workingHours, busyBlocks, workSlots = []) {
+export function buildAvailableSlots(from, to, workingHours, busyBlocks = []) {
   const slots  = [];
   const cursor = startOfDay(from);
   const end    = startOfDay(to);
 
   while (cursor <= end) {
-    const dayIntervals = getDayIntervals(cursor, workSlots, workingHours);
+    const dayIntervals = getDayIntervals(cursor, workingHours);
 
     for (const iv of dayIntervals) {
       // Never schedule before `from` (e.g. don't place in the past)
@@ -56,7 +50,7 @@ export function buildAvailableSlots(from, to, workingHours, busyBlocks, workSlot
         }));
 
       const freeMinutes = freeTimeInDay(dayStart, dayEnd, dayBusy);
-      slots.push({ date: new Date(cursor), start: dayStart, end: dayEnd, dayBusy, freeMinutes, workSlotId: iv.workSlotId ?? null });
+      slots.push({ date: new Date(cursor), start: dayStart, end: dayEnd, dayBusy, freeMinutes });
     }
 
     cursor.setDate(cursor.getDate() + 1);
@@ -109,7 +103,6 @@ function topoSort(tasks) {
 export async function runScheduler() {
   const { settings, calendarEvents, tasks: allTasks } = getState();
   const workingHours = settings?.workingHours ?? defaultWorkingHours();
-  const workSlots    = settings?.workSlots    ?? [];
   const busyBlocks   = calendarEvents.map(e => ({
     start: new Date(e.start),
     end:   new Date(e.end),
@@ -159,25 +152,12 @@ export async function runScheduler() {
     const rangeStart = earliest < rangeEnd ? earliest : rangeEnd;
 
     const busyNow = [...busyBlocks, ...occupied];
-    const slots   = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow, workSlots);
-
-    // ── Pass 0: preferred work slot before due date (soft — falls through) ────
-    let placedBlocks = null;
-    if (task.workSlotId) {
-      const preferred = slots.filter(s => s.workSlotId === task.workSlotId);
-      const prefSingle = placeLatest(preferred, neededMins, due);
-      if (prefSingle) placedBlocks = [prefSingle];
-      if (!placedBlocks) {
-        const prefSplit = placeSplit(preferred, neededMins);
-        if (prefSplit) placedBlocks = prefSplit;
-      }
-    }
+    const slots   = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow);
 
     // ── Pass 1: single contiguous block before due date ───────────────────────
-    if (!placedBlocks) {
-      const single = placeLatest(slots, neededMins, due);
-      if (single) placedBlocks = [single];
-    }
+    let placedBlocks = null;
+    const single = placeLatest(slots, neededMins, due);
+    if (single) placedBlocks = [single];
 
     // ── Pass 1.5: split across multiple slots before due date ─────────────────
     if (!placedBlocks) {
@@ -189,7 +169,7 @@ export async function runScheduler() {
     let isLate = false;
     if (!placedBlocks) {
       const extStart  = new Date(Math.max(due.getTime(), earliest.getTime()));
-      const lateSlots = buildAvailableSlots(extStart, horizon, workingHours, busyNow, workSlots);
+      const lateSlots = buildAvailableSlots(extStart, horizon, workingHours, busyNow);
       const lateSingle = placeEarliest(lateSlots, neededMins);
       if (lateSingle) {
         placedBlocks = [lateSingle];
@@ -328,27 +308,8 @@ function placeEarliest(slots, neededMins) {
   return null;
 }
 
-/**
- * Return the schedulable intervals for a single calendar day.
- * Prefers workSlots (the blocks the user defined in the weekly view) so the
- * scheduler stays in sync with what is shown on screen.  Falls back to the
- * simple per-day start/end from workingHours when workSlots is empty.
- */
-function getDayIntervals(date, workSlots, workingHours) {
+function getDayIntervals(date, workingHours) {
   const dow = date.getDay();
-
-  if (workSlots?.length) {
-    return workSlots
-      .filter(ws => ws.days?.includes(dow))
-      .map(ws => ({
-        start:      parseTime(date, ws.startTime),
-        end:        parseTime(date, ws.endTime),
-        workSlotId: ws.id,
-      }))
-      .filter(iv => iv.start < iv.end)
-      .sort((a, b) => a.start - b.start);
-  }
-
   const wh = workingHours[dow];
   if (!wh) return [];
   return [{ start: parseTime(date, wh.start), end: parseTime(date, wh.end) }];

@@ -856,76 +856,9 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   pointer-events: none;
   z-index: 0;
 }
-.work-slot-band {
-  position: absolute;
-  left: 0; right: 0;
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 0;
-}
-.work-slot-label {
-  display: block;
-  font-size: .6rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  opacity: .75;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: .03em;
-  text-transform: uppercase;
-}
 /* hour slots sit above overlays; task blocks above hour slots */
 .hour-slot        { z-index: 1; }
 .week-task-block  { z-index: 2; }
-
-/* ─── Time slot type settings rows ──────────────────────── */
-.ws-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-.ws-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-}
-.ws-color {
-  width: 32px; height: 32px;
-  border: none; border-radius: 6px;
-  cursor: pointer; padding: 0; flex-shrink: 0;
-}
-.ws-name {
-  flex: 1; min-width: 130px;
-  padding: 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body); font-size: .88rem;
-  outline: none;
-}
-.ws-name:focus { border-color: var(--brand); }
-.ws-start, .ws-end {
-  width: 88px; padding: 5px 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body); font-size: .85rem;
-  outline: none;
-}
-.ws-start:focus, .ws-end:focus { border-color: var(--brand); }
-.ws-sep { color: var(--text-muted); font-weight: 700; }
-.ws-days { display: flex; gap: 3px; flex-wrap: wrap; }
-.ws-day-btn {
-  width: 26px; height: 26px; border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-size: .68rem; font-weight: 700;
-  color: var(--text-muted); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .12s, border-color .12s, color .12s;
-}
-.ws-day-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; }
-.ws-day-btn:hover:not(.active) { border-color: var(--brand); color: var(--brand); }
 
 /* ─── Scrollbar (webkit) ─────────────────────────────────── */
 ::-webkit-scrollbar       { width: 5px; height: 5px; }
@@ -1056,7 +989,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   .settings-section { padding: 16px; }
   .wh-row { flex-wrap: wrap; }
   .wh-day { width: 100%; margin-bottom: 4px; }
-  .ws-row { flex-direction: column; align-items: flex-start; }
 
   /* ── Tap targets ─────────────────────────── */
   .btn-primary, .btn-secondary, .btn-ghost { min-height: 44px; }
