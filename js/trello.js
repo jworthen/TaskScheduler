@@ -194,17 +194,26 @@ export async function getLists(boardId) {
 
 // ─── Cards (Tasks) ────────────────────────────────────────────────────────────
 
-/** Fetch open cards that have a due date and are not yet complete.
+/** Fetch open cards that have a due date and are not yet complete,
+ *  plus any cards marked dueComplete today (for "completed today" tracking).
  *  openListIds filters out cards whose list has been archived (Trello's
  *  card-level "open" filter does not exclude cards in archived lists). */
 export async function getCards(boardId, openListIds) {
   const cards = await get(`/boards/${boardId}/cards`, {
     filter: "open",
-    fields: "id,name,desc,due,dueComplete,start,idList,labels,shortUrl",
+    fields: "id,name,desc,due,dueComplete,dateLastActivity,start,idList,labels,shortUrl",
     customFieldItems: "true",
   });
   const openListSet = new Set(openListIds);
-  const relevant = cards.filter(c => c.due && !c.dueComplete && openListSet.has(c.idList));
+  const todayStr = new Date().toDateString();
+  const relevant = cards.filter(c => {
+    if (!openListSet.has(c.idList)) return false;
+    if (c.dueComplete) {
+      // Include only if marked complete today
+      return c.dateLastActivity && new Date(c.dateLastActivity).toDateString() === todayStr;
+    }
+    return !!c.due;
+  });
 
   // Build shortLink → cardId map so "Blocked By" field values can be resolved.
   // The shortUrl looks like "https://trello.com/c/Abc12345"; we extract "Abc12345".
@@ -251,7 +260,6 @@ export function getTrelloCache() {
           estimatedHours:           meta.estimatedHours           ?? t.estimatedHours           ?? 1,
           priority:                 meta.priority                 ?? t.priority,
           blockerIds:               meta.blockerIds               ?? t.blockerIds               ?? [],
-          workSlotId:               meta.workSlotId               ?? t.workSlotId               ?? null,
         };
       }),
     };
@@ -392,8 +400,8 @@ export function cardToTask(card, boardId, shortLinkMap = {}) {
     estimatedHours:    effortFromTrello ?? meta.estimatedHours ?? 1,
     dueDate:           card.due               ? new Date(card.due)   : null,
     startDate:         card.start             ? new Date(card.start) : null,
-    completed:         card.dueComplete        ?? false,
-    completedAt:       null,
+    completed:         card.dueComplete                                          ?? false,
+    completedAt:       card.dueComplete && card.dateLastActivity ? new Date(card.dateLastActivity) : null,
     scheduledStart:     meta.scheduledStart    ? new Date(meta.scheduledStart) : null,
     scheduledEnd:       meta.scheduledEnd      ? new Date(meta.scheduledEnd)   : null,
     scheduledBlocks:    meta.scheduledBlocks
