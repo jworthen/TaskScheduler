@@ -64,10 +64,10 @@ Full redesign using Slightly Biased Quilts branding colors and a quilting-inspir
 - Ice blue — low priority, secondary backgrounds
 
 **UI direction**
-- [ ] Apply brand color palette consistently across all views
-- [ ] Navy sidebar replaces current sidebar treatment
-- [ ] Functional color assignments for priority and task status badges
-- [ ] Subtle quilt-block geometric motifs (chevron/diamond) in empty states and sidebar header
+- [x] Apply brand color palette consistently across all views
+- [x] Navy sidebar replaces current sidebar treatment
+- [x] Functional color assignments for priority and task status badges
+- [x] Subtle quilt-block geometric motifs (chevron/diamond) in sidebar header
 - [ ] Color-coded project indicators in calendar using full brand palette (one color per Trello board)
 - [ ] Dark mode toggle (built on top of redesigned light theme)
 - [ ] Project timeline view: Gantt-style, one row per Trello board, tasks laid out in time
