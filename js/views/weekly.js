@@ -175,7 +175,7 @@ function buildTaskBlock(task, categories, day) {
   if (!start || !end) return "";
 
   const cat   = categories.find(c => c.id === task.categoryId);
-  const color = cat?.color ?? "#9b5de5";
+  const color = cat?.color ?? "#1FA8B4";
 
   const dayStart  = new Date(day); dayStart.setHours(HOUR_START, 0, 0, 0);
   const dayEnd    = new Date(day); dayEnd.setHours(HOUR_END, 0, 0, 0);
@@ -202,7 +202,7 @@ function buildUnscheduledList(tasks, categories) {
   if (!unscheduled.length) return `<p class="empty-state">All tasks are scheduled! 🎉</p>`;
   return unscheduled.map(t => {
     const cat = categories.find(c => c.id === t.categoryId);
-    const color = cat?.color ?? "#9b5de5";
+    const color = cat?.color ?? "#1FA8B4";
     return `
       <div class="unscheduled-task" data-task-id="${t.id}" draggable="true"
            style="border-left:3px solid ${color}">
