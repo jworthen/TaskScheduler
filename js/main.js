@@ -14,6 +14,7 @@ import {
   loadCredentials, isConnected,
   extractTokenFromUrl, saveCredentials,
   getAvailableBoards, enrichBoards, getCards,
+  getTrelloCache, setTrelloCache,
 } from "./trello.js";
 
 import { runScheduler }    from "./scheduler.js";
@@ -58,6 +59,14 @@ export function rerenderCurrent() {
 
 export async function loadTrelloData() {
   if (!isConnected()) return;
+
+  // Show cached data immediately so the UI is responsive on load
+  const cached = getTrelloCache();
+  if (cached) {
+    setState({ projects: cached.projects, tasks: cached.tasks, trelloConnected: true });
+    rerenderCurrent();
+  }
+
   try {
     setState({ loading: true });
 
@@ -79,6 +88,7 @@ export async function loadTrelloData() {
     const tasks = cardArrays.flat();
 
     setState({ projects, tasks, loading: false, trelloConnected: true });
+    setTrelloCache(projects, tasks);
     rerenderCurrent();
   } catch (err) {
     setState({ loading: false });

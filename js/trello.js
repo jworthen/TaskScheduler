@@ -217,6 +217,53 @@ export async function getCards(boardId, openListIds) {
   return relevant.map(c => cardToTask(c, boardId, shortLinkMap));
 }
 
+// ─── Trello data cache ────────────────────────────────────────────────────────
+// Caches the last-fetched projects + raw task shapes so the app can render
+// instantly on load without waiting for Trello API calls to complete.
+// Scheduling metadata (scheduledStart, estimatedHours, etc.) is intentionally
+// NOT cached — it is always re-read live from localStorage so that scheduler
+// changes made between Trello fetches are reflected correctly.
+
+const TRELLO_CACHE_KEY = "ts_trello_cache";
+
+export function getTrelloCache() {
+  try {
+    const raw = localStorage.getItem(TRELLO_CACHE_KEY);
+    if (!raw) return null;
+    const { projects, tasks } = JSON.parse(raw);
+    return {
+      projects,
+      tasks: tasks.map(t => {
+        const meta = getSchedMeta(t.id);
+        return {
+          ...t,
+          dueDate:                  t.dueDate   ? new Date(t.dueDate)   : null,
+          startDate:                t.startDate ? new Date(t.startDate) : null,
+          // Always use current localStorage values for scheduling metadata
+          scheduledStart:           meta.scheduledStart ? new Date(meta.scheduledStart) : null,
+          scheduledEnd:             meta.scheduledEnd   ? new Date(meta.scheduledEnd)   : null,
+          scheduledBlocks:          meta.scheduledBlocks
+            ? meta.scheduledBlocks.map(b => ({ start: new Date(b.start), end: new Date(b.end) }))
+            : null,
+          schedUnschedulable:       meta.schedUnschedulable       ?? t.schedUnschedulable       ?? false,
+          schedUnschedulableReason: meta.schedUnschedulableReason ?? t.schedUnschedulableReason ?? null,
+          manuallyScheduled:        meta.manuallyScheduled        ?? t.manuallyScheduled        ?? false,
+          estimatedHours:           meta.estimatedHours           ?? t.estimatedHours           ?? 1,
+          priority:                 meta.priority                 ?? t.priority,
+          blockerIds:               meta.blockerIds               ?? t.blockerIds               ?? [],
+          workSlotId:               meta.workSlotId               ?? t.workSlotId               ?? null,
+        };
+      }),
+    };
+  } catch { return null; }
+}
+
+export function setTrelloCache(projects, tasks) {
+  try {
+    localStorage.setItem(TRELLO_CACHE_KEY, JSON.stringify({ projects, tasks }));
+  } catch { /* storage quota exceeded — skip silently */ }
+}
+
 // ─── Scheduling metadata ──────────────────────────────────────────────────────
 // estimatedHours is read from the Trello "Effort" custom field (read-only).
 // All other scheduling metadata lives in localStorage.
