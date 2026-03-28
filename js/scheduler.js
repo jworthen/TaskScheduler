@@ -56,7 +56,7 @@ export function buildAvailableSlots(from, to, workingHours, busyBlocks, workSlot
         }));
 
       const freeMinutes = freeTimeInDay(dayStart, dayEnd, dayBusy);
-      slots.push({ date: new Date(cursor), start: dayStart, end: dayEnd, dayBusy, freeMinutes });
+      slots.push({ date: new Date(cursor), start: dayStart, end: dayEnd, dayBusy, freeMinutes, workSlotId: iv.workSlotId ?? null });
     }
 
     cursor.setDate(cursor.getDate() + 1);
@@ -161,10 +161,23 @@ export async function runScheduler() {
     const busyNow = [...busyBlocks, ...occupied];
     const slots   = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow, workSlots);
 
-    // ── Pass 1: single contiguous block before due date ───────────────────────
+    // ── Pass 0: preferred work slot before due date (soft — falls through) ────
     let placedBlocks = null;
-    const single = placeLatest(slots, neededMins, due);
-    if (single) placedBlocks = [single];
+    if (task.workSlotId) {
+      const preferred = slots.filter(s => s.workSlotId === task.workSlotId);
+      const prefSingle = placeLatest(preferred, neededMins, due);
+      if (prefSingle) placedBlocks = [prefSingle];
+      if (!placedBlocks) {
+        const prefSplit = placeSplit(preferred, neededMins);
+        if (prefSplit) placedBlocks = prefSplit;
+      }
+    }
+
+    // ── Pass 1: single contiguous block before due date ───────────────────────
+    if (!placedBlocks) {
+      const single = placeLatest(slots, neededMins, due);
+      if (single) placedBlocks = [single];
+    }
 
     // ── Pass 1.5: split across multiple slots before due date ─────────────────
     if (!placedBlocks) {
@@ -328,8 +341,9 @@ function getDayIntervals(date, workSlots, workingHours) {
     return workSlots
       .filter(ws => ws.days?.includes(dow))
       .map(ws => ({
-        start: parseTime(date, ws.startTime),
-        end:   parseTime(date, ws.endTime),
+        start:      parseTime(date, ws.startTime),
+        end:        parseTime(date, ws.endTime),
+        workSlotId: ws.id,
       }))
       .filter(iv => iv.start < iv.end)
       .sort((a, b) => a.start - b.start);

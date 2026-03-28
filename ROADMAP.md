@@ -48,7 +48,7 @@ and settings are stored in localStorage. No backend server.
 - [ ] Better empty states: helpful nudges when no tasks are scheduled for a day
 - [ ] Keyboard shortcuts: ←/→ week/day navigation, S = settings, R = run scheduler
 - [ ] "Add to home screen" prompt/banner for first-time mobile visitors
-- [ ] Work slot preferences enforced in scheduler (UI and storage already built)
+- [x] Work slot preferences enforced in scheduler (UI and storage already built)
 
 ---
 
