@@ -542,40 +542,109 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .progress-bar-fill  { height: 100%; background: linear-gradient(90deg, var(--green), #C8DC5C); border-radius: 99px; transition: width .4s ease; }
 .progress-pct       { font-size: .72rem; color: var(--text-muted); margin-top: 5px; text-align: right; font-weight: 600; }
 
-.daily-timeline { display: flex; flex-direction: column; gap: 10px; }
-
-.daily-task-card {
-  display: flex;
-  gap: 16px;
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-  box-shadow: var(--shadow);
-  cursor: pointer;
-  transition: box-shadow .15s, transform .15s;
-  border: 1px solid var(--border);
+/* ─── Focus layout (two columns) ────────────────────────── */
+.focus-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 0 40px;
+  align-items: start;
 }
-.daily-task-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
-.task-completed .daily-task-card { opacity: .6; }
+@media (max-width: 960px) {
+  .focus-layout { grid-template-columns: 1fr; }
+}
 
-.daily-card-time {
+/* ─── Top 3 focus cards ──────────────────────────────────── */
+.focus-cards {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  min-width: 60px;
-  font-weight: 700;
-  font-size: .82rem;
-  color: var(--brand);
-  padding-top: 2px;
+  gap: 12px;
+  margin-bottom: 28px;
 }
-.time-end { font-size: .72rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; }
 
-.daily-card-body { flex: 1; }
-.daily-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.daily-card-meta   { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
-.daily-card-notes  { font-size: .8rem; color: var(--text-muted); margin-top: 7px; font-style: italic; line-height: 1.5; }
-.blocker-warning   { font-size: .78rem; color: var(--red); margin-top: 4px; }
-.strikethrough     { text-decoration: line-through; }
+.focus-card {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  overflow: hidden;
+  transition: box-shadow .15s, transform .15s;
+}
+.focus-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+.focus-card--empty {
+  cursor: default;
+  opacity: .4;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  background: var(--surface-2);
+  box-shadow: none;
+}
+.focus-card--empty:hover { box-shadow: none; transform: none; }
+.focus-card-empty-msg { font-size: .85rem; color: var(--text-muted); font-style: italic; }
+
+.focus-card-strip {
+  width: 5px;
+  flex-shrink: 0;
+  background: var(--project-color, var(--brand));
+}
+.focus-card-inner {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+}
+.focus-card-num {
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-family: var(--font);
+  color: var(--border);
+  line-height: 1;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+.focus-card--empty .focus-card-num { font-size: 1.4rem; }
+.focus-card-content { flex: 1; }
+.focus-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 3px;
+  color: var(--text);
+}
+.focus-card-project {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.focus-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.focus-card-notes {
+  font-size: .8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+/* ─── Also today (compact rows below top 3) ─────────────── */
+.focus-also { margin-top: 4px; }
+.focus-also .section-title { margin-bottom: 10px; }
+
+/* ─── Completed today column ─────────────────────────────── */
+.focus-done { padding-top: 0; }
+.focus-done .section-title { margin-bottom: 10px; }
+.focus-done-list { display: flex; flex-direction: column; gap: 6px; }
 
 .complete-btn { background: transparent; font-size: 1.1rem; padding: 0 4px; }
 .complete-btn:hover { transform: scale(1.1); }
@@ -1038,9 +1107,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   .week-grid-wrapper { overflow-x: auto; max-height: 480px; }
   .week-columns { grid-template-columns: repeat(7, minmax(90px, 1fr)); min-width: 630px; }
 
-  /* ── Daily view ──────────────────────────── */
-  .daily-task-card { flex-direction: column; gap: 8px; }
-  .daily-card-time { flex-direction: row; gap: 6px; min-width: unset; align-items: center; }
 
   /* ── Kanban ──────────────────────────────── */
   .kanban-columns {
