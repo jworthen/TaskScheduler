@@ -12,12 +12,21 @@ const HOUR_START = 7;   // 7 AM
 const HOUR_END   = 22;  // 10 PM
 const SLOT_H     = 48;  // px per hour
 
+// Project colors — must match dashboard.js and daily.js
+const PROJECT_COLORS = [
+  "#1FA8B4","#3D4BB5","#C94B8C","#7CB518",
+  "#F5A623","#6B7FD7","#E85D4A","#20B2AA",
+];
+function projectColor(projectId, projects) {
+  const idx = projects.findIndex(p => p.id === projectId);
+  return PROJECT_COLORS[(idx < 0 ? 0 : idx) % PROJECT_COLORS.length];
+}
+
 let weekOffset = 0; // 0 = current week
 
 export function renderWeekly() {
   const el = document.getElementById("view-weekly");
-  const { tasks, settings } = getState();
-  const categories   = settings?.categories  ?? [];
+  const { tasks, projects, settings } = getState();
   const workingHours = settings?.workingHours ?? null;
 
   const today    = new Date();
@@ -62,7 +71,7 @@ export function renderWeekly() {
               </div>
               <div class="week-col-body" data-date="${day.toISOString()}">
                 ${buildDaySlots(day, workingHours)}
-                ${dayTasks.map(t => buildTaskBlock(t, categories, day)).join("")}
+                ${dayTasks.map(t => buildTaskBlock(t, projects, day)).join("")}
               </div>
             </div>
           `;
@@ -76,7 +85,7 @@ export function renderWeekly() {
         <span class="unschedule-hint">— drag scheduled tasks here to remove from calendar</span>
       </h3>
       <div class="unscheduled-list" id="unscheduled-drop-zone">
-        ${buildUnscheduledList(tasks, categories)}
+        ${buildUnscheduledList(tasks, projects)}
       </div>
     </section>
   `;
@@ -148,13 +157,12 @@ function buildDaySlots(day, workingHours) {
   return html;
 }
 
-function buildTaskBlock(task, categories, day) {
+function buildTaskBlock(task, projects, day) {
   const start = fromTs(task.scheduledStart);
   const end   = fromTs(task.scheduledEnd);
   if (!start || !end) return "";
 
-  const cat   = categories.find(c => c.id === task.categoryId);
-  const color = cat?.color ?? "#1FA8B4";
+  const color = projectColor(task.projectId, projects);
 
   const dayStart  = new Date(day); dayStart.setHours(HOUR_START, 0, 0, 0);
   const dayEnd    = new Date(day); dayEnd.setHours(HOUR_END, 0, 0, 0);
@@ -176,12 +184,11 @@ function buildTaskBlock(task, categories, day) {
   `;
 }
 
-function buildUnscheduledList(tasks, categories) {
+function buildUnscheduledList(tasks, projects) {
   const unscheduled = tasks.filter(t => !t.completed && !fromTs(t.scheduledStart));
   if (!unscheduled.length) return `<p class="empty-state">All tasks are scheduled! 🎉</p>`;
   return unscheduled.map(t => {
-    const cat = categories.find(c => c.id === t.categoryId);
-    const color = cat?.color ?? "#1FA8B4";
+    const color = projectColor(t.projectId, projects);
     return `
       <div class="unscheduled-task" data-task-id="${t.id}" draggable="true"
            style="border-left:3px solid ${color}">

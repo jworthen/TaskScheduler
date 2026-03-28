@@ -15,38 +15,18 @@ const state = {
   loading:           false,
 };
 
-const subscribers = {};
-
 export function getState() {
   return state;
 }
 
 export function setState(partial) {
   Object.assign(state, partial);
-  const keys = Object.keys(partial);
-  keys.forEach(k => {
-    (subscribers[k] || []).forEach(fn => fn(state[k], state));
-    (subscribers["*"] || []).forEach(fn => fn(state));
-  });
-}
-
-/** Subscribe to a specific key or "*" for any change */
-export function subscribe(key, fn) {
-  if (!subscribers[key]) subscribers[key] = [];
-  subscribers[key].push(fn);
-  return () => {
-    subscribers[key] = subscribers[key].filter(f => f !== fn);
-  };
 }
 
 // ─── Convenience selectors ───────────────────────────────────────────────────
 
 export function getProject(id) {
   return state.projects.find(p => p.id === id) ?? null;
-}
-
-export function getCategory(id) {
-  return (state.settings?.categories ?? []).find(c => c.id === id) ?? null;
 }
 
 export function getTask(id) {

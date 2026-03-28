@@ -398,26 +398,11 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   border: 1.5px solid transparent;
 }
 
-.blocked-badge   { background: var(--red-light);  color: var(--red);    padding: 3px 9px; border-radius: 20px; font-size: .72rem; font-weight: 700; }
-.recurring-badge { background: var(--blue-light); color: var(--blue);   padding: 3px 9px; border-radius: 20px; font-size: .72rem; }
-.split-badge     { background: var(--brand-light); color: var(--brand-dark); padding: 3px 9px; border-radius: 20px; font-size: .72rem; font-weight: 600; }
+.blocked-badge        { background: var(--red-light);    color: var(--red);        padding: 3px 9px; border-radius: 20px; font-size: .72rem; font-weight: 700; }
+.recurring-badge      { background: var(--blue-light);   color: var(--blue);       padding: 3px 9px; border-radius: 20px; font-size: .72rem; }
+.split-badge          { background: var(--brand-light);  color: var(--brand-dark); padding: 3px 9px; border-radius: 20px; font-size: .72rem; font-weight: 600; }
+.unschedulable-reason { background: var(--yellow-light); color: #7a5100;           padding: 3px 9px; border-radius: 20px; font-size: .72rem; font-weight: 600; }
 .done-badge      { font-size: .85rem; }
-
-/* ─── Project chips ──────────────────────────────────────── */
-.project-chips { display: flex; flex-wrap: wrap; gap: 10px; }
-
-.project-chip {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 20px;
-  cursor: pointer;
-  transition: border-color .15s, box-shadow .15s, transform .15s;
-  display: flex; flex-direction: column; gap: 3px;
-}
-.project-chip:hover { border-color: var(--brand); box-shadow: var(--shadow); transform: translateY(-1px); }
-.project-chip-name  { font-weight: 700; font-family: var(--font); font-size: 1rem; }
-.project-chip-count { font-size: .75rem; color: var(--text-muted); }
 
 /* ─── Weekly grid ────────────────────────────────────────── */
 .week-grid-wrapper {
@@ -646,20 +631,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .focus-done .section-title { margin-bottom: 10px; }
 .focus-done-list { display: flex; flex-direction: column; gap: 6px; }
 
-.complete-btn { background: transparent; font-size: 1.1rem; padding: 0 4px; }
-.complete-btn:hover { transform: scale(1.1); }
-
-.complete-dot {
-  width: 18px; height: 18px; flex-shrink: 0;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  background: transparent;
-  transition: background .15s, border-color .15s;
-}
-.complete-dot--done {
-  background: var(--green);
-  border-color: var(--green);
-}
 
 .day-label { font-weight: 700; }
 
@@ -761,20 +732,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .wh-row input[type="time"]:focus { border-color: var(--brand); }
 .wh-row input:disabled { opacity: .4; }
 
-.cat-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-.cat-row { display: flex; flex-direction: column; gap: 0; }
-.cat-color { width: 34px; height: 34px; border: none; border-radius: var(--radius-sm); cursor: pointer; padding: 0; }
-.cat-name-input {
-  flex: 1;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: .88rem;
-  outline: none;
-  transition: border-color .15s;
-}
-.cat-name-input:focus { border-color: var(--brand); }
 
 .board-filter-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
 .board-filter-row {
@@ -928,44 +885,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 }
 .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
 
-/* ─── Category image settings row ───────────────────────── */
-.cat-row-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.cat-img-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-}
-.cat-img-preview {
-  width: 56px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 6px;
-  flex-shrink: 0;
-}
-.cat-img-placeholder {
-  background: var(--border);
-}
-.cat-img-input {
-  flex: 1;
-  padding: 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: .82rem;
-  outline: none;
-  transition: border-color .15s;
-}
-.cat-img-input:focus { border-color: var(--brand); }
-
 /* ─── Unschedule drop zone (weekly view) ─────────────────── */
 .unschedule-hint {
   font-size: .75rem;
@@ -1107,14 +1026,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   .week-grid-wrapper { overflow-x: auto; max-height: 480px; }
   .week-columns { grid-template-columns: repeat(7, minmax(90px, 1fr)); min-width: 630px; }
 
-
-  /* ── Kanban ──────────────────────────────── */
-  .kanban-columns {
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-  }
-  .kanban-col { width: 260px; scroll-snap-align: start; }
 
   /* ── Modal → bottom sheet ────────────────── */
   .modal-overlay { align-items: flex-end; padding: 0; }

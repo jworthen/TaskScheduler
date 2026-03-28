@@ -4,7 +4,7 @@
 
 import { getState, getBlockedTasks } from "../store.js";
 import { fromTs } from "../db.js";
-import { formatDate, priorityBadge } from "../ui-utils.js";
+import { formatDate, formatTime, priorityBadge } from "../ui-utils.js";
 import { openTaskForm } from "../task-form.js";
 
 // Brand-palette project colors — assigned round-robin by project index
@@ -226,10 +226,6 @@ function unschedulableReasonLabel(reason) {
   if (reason === "blocker_beyond_horizon") return "Blocker scheduled beyond 60-day window";
   if (reason === "blocker_unschedulable")  return "Blocked by an unschedulable task";
   return "Not enough free time in the next 60 days";
-}
-
-function formatTime(date) {
-  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
 }
 
 function esc(str) {

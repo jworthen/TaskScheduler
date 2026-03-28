@@ -79,15 +79,4 @@ export function addDays(date, n) {
   return d;
 }
 
-// ─── Category color chip ─────────────────────────────────────────────────────
 
-export function categoryChip(category) {
-  if (!category) return "";
-  return `<span class="category-chip" style="background:${category.color}20;color:${category.color};border-color:${category.color}40">${category.name}</span>`;
-}
-
-// ─── Confirm dialog ──────────────────────────────────────────────────────────
-
-export function confirmAction(message) {
-  return window.confirm(message);
-}
