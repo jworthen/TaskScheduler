@@ -77,12 +77,20 @@ function applyFilters(el) {
     return true;
   });
 
-  // Sort: incomplete first, then by priority, then due date
+  const now2 = new Date();
+  const isOverdue = t => !t.completed && fromTs(t.dueDate) && fromTs(t.dueDate) < now2;
+  const po = { high: 0, medium: 1, low: 2 };
+
   filtered.sort((a, b) => {
-    if (a.completed !== b.completed) return a.completed ? 1 : -1;
-    const po = { high: 0, medium: 1, low: 2 };
-    const pd = (po[a.priority] ?? 1) - (po[b.priority] ?? 1);
-    if (pd !== 0) return pd;
+    const aOver = isOverdue(a), bOver = isOverdue(b);
+    // Overdue first
+    if (aOver !== bOver) return aOver ? -1 : 1;
+    if (aOver && bOver) {
+      // Within overdue: priority then due date
+      const pd = (po[a.priority] ?? 1) - (po[b.priority] ?? 1);
+      if (pd !== 0) return pd;
+    }
+    // Everything else (and tie-break within overdue): due date ascending, no-due last
     const da = fromTs(a.dueDate) ?? new Date(9999,0);
     const db = fromTs(b.dueDate) ?? new Date(9999,0);
     return da - db;
