@@ -40,15 +40,15 @@ and settings are stored in localStorage. No backend server.
 
 ---
 
-## 🔨 Phase 3 — Polish & Real-world Use (up next)
+## 🔨 Phase 3 — Polish & Real-world Use (in progress)
 
-- [ ] Auto-refresh Trello data when the app regains focus (returning from Trello)
-- [ ] Auto-run scheduler after a manual Trello refresh
+- [x] Auto-refresh Trello data when the app regains focus (returning from Trello)
+- [x] Auto-run scheduler after a manual Trello refresh
+- [x] Keyboard shortcuts: ←/→ week/day navigation, S = settings, R = run scheduler
+- [x] Work slot preferences enforced in scheduler (UI and storage already built)
 - [ ] First-run onboarding: clear prompt to connect Trello if not yet connected
 - [ ] Better empty states: helpful nudges when no tasks are scheduled for a day
-- [ ] Keyboard shortcuts: ←/→ week/day navigation, S = settings, R = run scheduler
 - [ ] "Add to home screen" prompt/banner for first-time mobile visitors
-- [x] Work slot preferences enforced in scheduler (UI and storage already built)
 
 ---
 
