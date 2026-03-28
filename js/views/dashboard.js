@@ -116,6 +116,9 @@ export function renderDashboard() {
       </div>
     </div>
 
+    <!-- ── TODAY ZONE + RADAR ZONE ──────────────────────────── -->
+    <div class="dash-columns">
+
     <!-- ── TODAY ZONE ────────────────────────────────────────── -->
     <div class="dash-zone">
       <div class="dash-zone-label">Today</div>
@@ -178,6 +181,8 @@ export function renderDashboard() {
     <div class="dash-zone">
       <p class="empty-state dash-all-clear">You're all caught up — nothing on the radar.</p>
     </div>`}
+
+    </div><!-- /.dash-columns -->
   `;
 
   el.querySelectorAll(".task-row").forEach(row => {
