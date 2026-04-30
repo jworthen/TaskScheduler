@@ -5,13 +5,12 @@
  * this modal only exposes the scheduling metadata that lives locally:
  *   - Estimated hours (for the auto-scheduler)
  *   - Priority override (defaults to label colour mapping)
- *   - Blocker card IDs (task dependencies, stored locally)
  *
  * A "Open in Trello" link is provided to edit the card itself.
  */
 
 import { getState, setState } from "./store.js";
-import { saveSchedMeta, getSchedMeta } from "./trello.js";
+import { saveSchedMeta } from "./trello.js";
 import { openModal, closeModal, toast } from "./ui-utils.js";
 import { rerenderCurrent } from "./main.js";
 
@@ -21,14 +20,6 @@ import { rerenderCurrent } from "./main.js";
  */
 export function openTaskForm(task) {
   if (!task) return;
-
-  const { tasks } = getState();
-
-  // Other tasks that could be declared as blockers (excluding this one)
-  const otherTasks = tasks.filter(t => t.id !== task.id);
-  const blockerOptions = otherTasks.map(t =>
-    `<option value="${t.id}" ${(task.blockerIds ?? []).includes(t.id) ? "selected" : ""}>${esc(t.name)}</option>`
-  ).join("");
 
   const html = `
     <form id="sched-form" autocomplete="off">
@@ -59,13 +50,6 @@ export function openTaskForm(task) {
         </div>
       </div>
 
-      <div class="form-row">
-        <label>Blockers <span class="hint">(cards that must be done first)</span></label>
-        ${otherTasks.length
-          ? `<select id="sf-blockers" multiple size="4" class="multi-select">${blockerOptions}</select>`
-          : `<p class="empty-hint">No other cards loaded.</p>`}
-      </div>
-
       <div class="form-actions">
         <button type="button" class="btn-ghost" id="sf-cancel">Cancel</button>
         <button type="submit" class="btn-primary">Save scheduling info</button>
@@ -83,14 +67,8 @@ export function openTaskForm(task) {
     const hours    = parseFloat(document.getElementById("sf-hours").value) || 1;
     const priority = document.getElementById("sf-priority")?.value || null;
 
-    const blockerSelect = document.getElementById("sf-blockers");
-    const blockerIds = blockerSelect
-      ? Array.from(blockerSelect.selectedOptions).map(o => o.value)
-      : task.blockerIds ?? [];
-
     const patch = {
       estimatedHours: hours,
-      blockerIds,
     };
     if (priority) patch.priority = priority;
 
