@@ -37,6 +37,7 @@ tasks:     renderTasks,
 export function switchView(name) {
   if (!VIEWS[name]) return;
   setState({ currentView: name });
+  localStorage.setItem("ts_current_view", name);
 
   document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
   document.getElementById(`view-${name}`).classList.add("active");
@@ -162,7 +163,8 @@ async function init() {
   // Show the dashboard immediately, then load data in the background.
   // loadTrelloData renders cached data first (instant), then re-renders
   // when the fresh Trello fetch completes.
-  switchView("dashboard");
+  const savedView = localStorage.getItem("ts_current_view");
+  switchView(VIEWS[savedView] ? savedView : "dashboard");
   loadTrelloData();
   initCalendar().catch(() => {});
 
