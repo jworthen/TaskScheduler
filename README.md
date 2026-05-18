@@ -1,4 +1,4 @@
-# Pattern Planner
+# Slightly Biased Studio
 
 A personal task scheduler for [Slightly Biased Quilts](https://jworthen.github.io). Built for one person, runs entirely in the browser — no server, no account, no cloud database.
 
@@ -58,4 +58,4 @@ To deploy manually or to a different host, serve the repo root as static files. 
 - Google Calendar API v3 via Google Identity Services
 - localStorage for all persistence
 - GitHub Pages for hosting
-- Proxima Soft for typography
+- Quicksand and Caveat (Google Fonts) for typography, with Proxima Soft as a local fallback
