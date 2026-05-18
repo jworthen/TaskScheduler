@@ -1,4 +1,4 @@
-# Pattern Planner — Roadmap
+# Slightly Biased Studio — Roadmap
 
 A web-based task scheduler for a solo quilting pattern design business (Slightly Biased Quilts).
 Single-user, browser-only. Task data lives in Trello; scheduling metadata
@@ -48,11 +48,11 @@ and settings are stored in localStorage. No backend server.
 
 ## ✅ Phase 4 — Visual Redesign & UX (complete)
 
-- [x] Brand color palette: navy sidebar, teal accents, charcoal text
-- [x] Sidebar brand identity: "Slightly Biased / Pattern Planner" with quilt diamond motif
+- [x] Brand color palette: pastel candy-pink, mint, and lilac with a soft lavender-cream sidebar
+- [x] Sidebar brand identity: "Slightly Biased / Studio" with quilt diamond motif
 - [x] Functional color badges for priority and task status
 - [x] Emoji removed throughout; clean typographic UI
-- [x] App renamed to Pattern Planner
+- [x] App renamed to Slightly Biased Studio
 - [x] Dashboard: greeting headline, two-zone layout (Today / On your radar)
 - [x] Dashboard: project color strips on task rows (brand palette, one color per board)
 - [x] Dashboard: smart stat cards (green when all-clear, amber/red when action needed)
