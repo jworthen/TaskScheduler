@@ -10,7 +10,7 @@ import { toast, startOfWeek, addDays, isSameDay, formatTime } from "../ui-utils.
 
 const HOUR_START = 7;   // 7 AM
 const HOUR_END   = 22;  // 10 PM
-const SLOT_H     = 48;  // px per hour
+const SLOT_H     = 60;  // px per hour
 
 let weekOffset = 0; // 0 = current week
 

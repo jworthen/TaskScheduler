@@ -509,7 +509,7 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   border: 2px solid var(--brand-light);
   overflow: hidden;
   box-shadow: var(--shadow);
-  max-height: 640px;
+  max-height: 820px;
   overflow-y: auto;
 }
 
@@ -519,13 +519,13 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   position: relative;
   border-right: 1px solid var(--border);
   background: var(--surface-2);
-  min-height: calc(15 * 48px);
+  min-height: calc(15 * 60px);
   padding-top: 44px;
 }
 .time-label {
   position: absolute;
   right: 8px;
-  font-size: .65rem;
+  font-size: .72rem;
   color: var(--text-muted);
   transform: translateY(-50%);
   white-space: nowrap;
@@ -561,7 +561,7 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 
 .week-col-body {
   position: relative;
-  min-height: calc(15 * 48px);
+  min-height: calc(15 * 60px);
 }
 .hour-slot {
   position: absolute;
@@ -574,8 +574,8 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   position: absolute;
   left: 2px; right: 2px;
   border-radius: 8px;
-  padding: 3px 6px;
-  font-size: .72rem;
+  padding: 4px 7px;
+  font-size: .8rem;
   cursor: pointer;
   overflow: hidden;
   transition: opacity .15s, box-shadow .15s;
@@ -584,7 +584,7 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .week-task-block:hover { opacity: .88; box-shadow: var(--shadow); }
 .week-task-block.dragging { opacity: .4; }
 .block-name { font-weight: 700; line-height: 1.2; }
-.block-time { color: rgba(0,0,0,.45); font-size: .65rem; }
+.block-time { color: rgba(0,0,0,.45); font-size: .7rem; }
 .task-completed .block-name { text-decoration: line-through; opacity: .5; }
 
 .unscheduled-section { margin-top: 20px; }
