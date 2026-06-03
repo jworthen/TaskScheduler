@@ -151,11 +151,11 @@ function taskRow(task, blockedIds) {
   return `
     <tr data-task-id="${task.id}" class="${task.completed ? "row-completed" : ""} ${isBlocked ? "row-blocked" : ""}">
       <td class="task-name-cell">
-        ${esc(task.name)}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}
+        ${esc(task.name)}
         ${isBlocked ? ` <span class="blocked-badge">🚫</span>` : ""}
         ${task.trelloUrl ? ` <a href="${task.trelloUrl}" target="_blank" rel="noopener" class="trello-card-link" onclick="event.stopPropagation()" title="Open in Trello">↗</a>` : ""}
       </td>
-      <td>${project ? esc(project.name) : "—"}</td>
+      <td>${project ? esc(project.name) : "—"}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}</td>
       <td>${priorityBadge(task.priority)}</td>
       <td class="${due && due < now && !task.completed ? "overdue" : ""}">${due ? formatDate(due) : "—"}</td>
       <td>${task.estimatedHours}h</td>
