@@ -213,10 +213,11 @@ function layoutDayTasks(dayTasks, day) {
   return items;
 }
 
+const CASCADE_OFFSET = 16; // px each overlapping block is shifted right
+
 function buildTaskBlock(item, categories) {
   const { task, start, startH, endH } = item;
-  const cols = item.cols || 1;
-  const col  = item.col  || 0;
+  const col = item.col || 0;
 
   const cat   = categories.find(c => c.id === task.categoryId);
   const color = cat?.color ?? "#1FA8B4";
@@ -224,14 +225,16 @@ function buildTaskBlock(item, categories) {
   const topPx    = (startH - HOUR_START) * SLOT_H;
   const heightPx = (endH - startH) * SLOT_H;
 
-  const widthPct = 100 / cols;
-  const leftPct  = col * widthPct;
+  // Cascade: each subsequent overlapping block is nudged to the right and
+  // layered on top, leaving a sliver of the ones behind it visible.
+  const leftPx  = 2 + col * CASCADE_OFFSET;
+  const zIndex  = 1 + col;
 
   return `
     <div class="week-task-block ${task.completed ? "task-completed" : ""}"
          data-task-id="${task.id}"
          draggable="true"
-         style="top:${topPx}px;height:${Math.max(heightPx,20)}px;left:calc(${leftPct}% + 2px);width:calc(${widthPct}% - 4px);background:${color}22;border-left:3px solid ${color}">
+         style="top:${topPx}px;height:${Math.max(heightPx,20)}px;left:${leftPx}px;right:2px;--block-z:${zIndex};background:${color}22;border-left:3px solid ${color}">
       <div class="block-name">${esc(task.name)}</div>
       <div class="block-time">${formatTime(start)}</div>
     </div>

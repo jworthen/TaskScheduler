@@ -578,9 +578,9 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   cursor: pointer;
   overflow: hidden;
   transition: opacity .15s, box-shadow .15s;
-  z-index: 1;
+  z-index: var(--block-z, 1);
 }
-.week-task-block:hover { opacity: .88; box-shadow: var(--shadow); }
+.week-task-block:hover { opacity: 1; box-shadow: var(--shadow); z-index: 50; }
 .week-task-block.dragging { opacity: .4; }
 .block-name { font-weight: 700; line-height: 1.2; }
 .block-time { color: rgba(0,0,0,.45); font-size: .7rem; }
