@@ -572,7 +572,6 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 
 .week-task-block {
   position: absolute;
-  left: 2px; right: 2px;
   border-radius: 8px;
   padding: 4px 7px;
   font-size: .8rem;
