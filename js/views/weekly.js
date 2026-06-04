@@ -62,7 +62,7 @@ export function renderWeekly() {
               </div>
               <div class="week-col-body" data-date="${day.toISOString()}">
                 ${buildDaySlots(day, workingHours)}
-                ${dayTasks.map(t => buildTaskBlock(t, categories, day)).join("")}
+                ${layoutDayTasks(dayTasks, day).map(item => buildTaskBlock(item, categories)).join("")}
               </div>
             </div>
           `;
@@ -148,30 +148,92 @@ function buildDaySlots(day, workingHours) {
   return html;
 }
 
-function buildTaskBlock(task, categories, day) {
+// Compute a task's clamped time interval (in fractional hours) for the given day.
+function taskInterval(task, day) {
   const start = fromTs(task.scheduledStart);
   const end   = fromTs(task.scheduledEnd);
-  if (!start || !end) return "";
+  if (!start || !end) return null;
 
-  const cat   = categories.find(c => c.id === task.categoryId);
-  const color = cat?.color ?? "#1FA8B4";
-
-  const dayStart  = new Date(day); dayStart.setHours(HOUR_START, 0, 0, 0);
-  const dayEnd    = new Date(day); dayEnd.setHours(HOUR_END, 0, 0, 0);
+  const dayStart = new Date(day); dayStart.setHours(HOUR_START, 0, 0, 0);
+  const dayEnd   = new Date(day); dayEnd.setHours(HOUR_END, 0, 0, 0);
 
   const clampedStart = start < dayStart ? dayStart : start;
   const clampedEnd   = end   > dayEnd   ? dayEnd   : end;
 
-  const topPx    = ((clampedStart.getHours() + clampedStart.getMinutes()/60) - HOUR_START) * SLOT_H;
-  const heightPx = ((clampedEnd.getHours() + clampedEnd.getMinutes()/60) - (clampedStart.getHours() + clampedStart.getMinutes()/60)) * SLOT_H;
+  const startH = clampedStart.getHours() + clampedStart.getMinutes() / 60;
+  const endH   = clampedEnd.getHours()   + clampedEnd.getMinutes()   / 60;
+
+  return { task, start: clampedStart, startH, endH };
+}
+
+// Assign overlapping tasks to side-by-side columns (calendar-style layout).
+// Each returned item gets `col` (0-based column index) and `cols` (columns in
+// its overlap cluster) so blocks can share the available width instead of
+// stacking on top of one another.
+function layoutDayTasks(dayTasks, day) {
+  const items = dayTasks.map(t => taskInterval(t, day)).filter(Boolean);
+  items.sort((a, b) => a.startH - b.startH || a.endH - b.endH);
+
+  let cluster = [];
+  let columnEnds = [];   // last end time per column in the current cluster
+  let clusterEnd = -Infinity;
+
+  const flush = () => {
+    const cols = columnEnds.length || 1;
+    cluster.forEach(it => { it.cols = cols; });
+    cluster = [];
+    columnEnds = [];
+    clusterEnd = -Infinity;
+  };
+
+  for (const it of items) {
+    // Start a new cluster once this task no longer overlaps the current one.
+    if (cluster.length && it.startH >= clusterEnd) flush();
+
+    // Reuse the first column whose previous task has already ended.
+    let placed = false;
+    for (let c = 0; c < columnEnds.length; c++) {
+      if (it.startH >= columnEnds[c]) {
+        columnEnds[c] = it.endH;
+        it.col = c;
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) {
+      it.col = columnEnds.length;
+      columnEnds.push(it.endH);
+    }
+
+    cluster.push(it);
+    clusterEnd = Math.max(clusterEnd, it.endH);
+  }
+  flush();
+
+  return items;
+}
+
+function buildTaskBlock(item, categories) {
+  const { task, start, startH, endH } = item;
+  const cols = item.cols || 1;
+  const col  = item.col  || 0;
+
+  const cat   = categories.find(c => c.id === task.categoryId);
+  const color = cat?.color ?? "#1FA8B4";
+
+  const topPx    = (startH - HOUR_START) * SLOT_H;
+  const heightPx = (endH - startH) * SLOT_H;
+
+  const widthPct = 100 / cols;
+  const leftPct  = col * widthPct;
 
   return `
     <div class="week-task-block ${task.completed ? "task-completed" : ""}"
          data-task-id="${task.id}"
          draggable="true"
-         style="top:${topPx}px;height:${Math.max(heightPx,20)}px;background:${color}22;border-left:3px solid ${color}">
+         style="top:${topPx}px;height:${Math.max(heightPx,20)}px;left:calc(${leftPct}% + 2px);width:calc(${widthPct}% - 4px);background:${color}22;border-left:3px solid ${color}">
       <div class="block-name">${esc(task.name)}</div>
-      <div class="block-time">${formatTime(clampedStart)}</div>
+      <div class="block-time">${formatTime(start)}</div>
     </div>
   `;
 }
