@@ -213,7 +213,7 @@ function layoutDayTasks(dayTasks, day) {
   return items;
 }
 
-const CASCADE_OFFSET = 16; // px each overlapping block is shifted right
+const CASCADE_OFFSET = 22; // px each overlapping block is shifted right
 
 function buildTaskBlock(item, categories) {
   const { task, start, startH, endH } = item;
@@ -234,7 +234,7 @@ function buildTaskBlock(item, categories) {
     <div class="week-task-block ${task.completed ? "task-completed" : ""}"
          data-task-id="${task.id}"
          draggable="true"
-         style="top:${topPx}px;height:${Math.max(heightPx,20)}px;left:${leftPx}px;right:2px;--block-z:${zIndex};background:${color}22;border-left:3px solid ${color}">
+         style="top:${topPx}px;height:${Math.max(heightPx,20)}px;left:${leftPx}px;right:2px;--block-z:${zIndex};background:linear-gradient(${color}2b,${color}2b),#fff;border-left:3px solid ${color}">
       <div class="block-name">${esc(task.name)}</div>
       <div class="block-time">${formatTime(start)}</div>
     </div>
