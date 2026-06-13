@@ -11,6 +11,7 @@
 
 import { getState, setState } from "./store.js";
 import { saveSchedMeta } from "./trello.js";
+import { runScheduler } from "./scheduler.js";
 import { openModal, closeModal, toast } from "./ui-utils.js";
 import { rerenderCurrent } from "./main.js";
 
@@ -20,6 +21,13 @@ import { rerenderCurrent } from "./main.js";
  */
 export function openTaskForm(task) {
   if (!task) return;
+
+  // Candidate blockers: other open cards in the same Trello list, sorted by name.
+  const { tasks: allTasks } = getState();
+  const siblings = allTasks
+    .filter(t => t.id !== task.id && t.stageId === task.stageId && !t.completed)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const currentBlockers = new Set(task.blockerIds ?? []);
 
   const html = `
     <form id="sched-form" autocomplete="off">
@@ -59,6 +67,19 @@ export function openTaskForm(task) {
         </select>
       </div>
 
+      <div class="form-row">
+        <label>Blocked by <span class="hint">(cards in this list that must finish first)</span></label>
+        ${siblings.length
+          ? `<div class="blocker-picker" id="sf-blockers">
+               ${siblings.map(s => `
+                 <label class="blocker-option">
+                   <input type="checkbox" value="${esc(s.id)}" ${currentBlockers.has(s.id) ? "checked" : ""} />
+                   <span>${esc(s.name)}</span>
+                 </label>`).join("")}
+             </div>`
+          : `<p class="hint">No other open cards in this list to block on.</p>`}
+      </div>
+
       <div class="form-actions">
         <button type="button" class="btn-ghost" id="sf-cancel">Cancel</button>
         <button type="submit" class="btn-primary">Save scheduling info</button>
@@ -83,6 +104,21 @@ export function openTaskForm(task) {
     };
     if (priority) patch.priority = priority;
 
+    // Collect blockers from the picker (only present when this list has sibling cards).
+    // Preserve any existing blockers that live outside this list — the picker only
+    // covers same-list cards, so we must not silently drop the others.
+    let blockersChanged = false;
+    const blockerPicker = document.getElementById("sf-blockers");
+    if (blockerPicker) {
+      const siblingIds = new Set(siblings.map(s => s.id));
+      const checked    = Array.from(blockerPicker.querySelectorAll("input:checked")).map(i => i.value);
+      const preserved  = Array.from(currentBlockers).filter(id => !siblingIds.has(id));
+      const next       = [...checked, ...preserved];
+      patch.blockerIds = next;
+      blockersChanged  = next.length !== currentBlockers.size
+        || next.some(id => !currentBlockers.has(id));
+    }
+
     saveSchedMeta(task.id, patch);
 
     // Update in-memory store so views reflect the change immediately
@@ -94,6 +130,9 @@ export function openTaskForm(task) {
 
     closeModal();
     toast("Scheduling info saved!", "success");
+
+    // Changing blockers alters dependency order — reflow the schedule
+    if (blockersChanged) await runScheduler();
     rerenderCurrent();
   });
 }

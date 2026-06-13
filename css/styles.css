@@ -981,6 +981,21 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .toggle-label { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: .88rem; cursor: pointer; }
 .toggle-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--brand); }
 
+/* Blocker picker — scrollable checklist of sibling cards */
+.blocker-picker {
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 180px; overflow-y: auto;
+  border: 1.5px solid var(--brand-light); border-radius: var(--radius-sm);
+  padding: 6px;
+}
+.blocker-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: var(--radius-sm);
+  font-size: .9rem; font-weight: 500; color: var(--text); cursor: pointer;
+}
+.blocker-option:hover { background: var(--surface-2); }
+.blocker-option input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--brand); flex: none; }
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
