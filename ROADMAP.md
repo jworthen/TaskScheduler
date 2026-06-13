@@ -67,7 +67,8 @@ and settings are stored in localStorage. No backend server.
 
 ## 💡 Phase 5 — Nice-to-haves
 
-- [x] Task status: mark a card "Active" (in progress) to pin it to the top of the to-do lists
+- [x] Task status: mark a card "Active" (in progress) or "On Hold" to reorder the to-do lists
+- [x] In-app blocker picker: set which same-list cards must finish first, from the scheduling modal
 - [ ] Project color strips in the weekly calendar (matches dashboard/focus colors)
 - [ ] Dark mode toggle
 - [ ] Project timeline view: Gantt-style, one row per Trello board

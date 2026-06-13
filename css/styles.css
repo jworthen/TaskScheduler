@@ -479,6 +479,11 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   background: var(--purple-light); color: #7C5BC0; border-color: var(--purple);
   text-transform: uppercase; letter-spacing: .04em; font-size: .66rem;
 }
+/* On-hold status — muted, recedes into the background */
+.badge-onhold {
+  background: var(--surface-2); color: var(--text-muted); border-color: var(--border);
+  text-transform: uppercase; letter-spacing: .04em; font-size: .66rem;
+}
 
 .category-chip {
   display: inline-flex; align-items: center;
@@ -819,6 +824,8 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .row-blocked td:first-child { border-left: 3px solid var(--red); }
 .row-active td { background: var(--purple-light); }
 .row-active td:first-child { border-left: 3px solid var(--purple); }
+.row-onhold td { opacity: .6; }
+.row-onhold td:first-child { border-left: 3px solid var(--text-muted); }
 .task-name-cell { font-weight: 600; max-width: 240px; }
 .task-actions { white-space: nowrap; }
 .overdue { color: var(--red) !important; font-weight: 700; }
@@ -973,6 +980,21 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .multi-select { min-height: 80px; }
 .toggle-label { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: .88rem; cursor: pointer; }
 .toggle-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--brand); }
+
+/* Blocker picker — scrollable checklist of sibling cards */
+.blocker-picker {
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 180px; overflow-y: auto;
+  border: 1.5px solid var(--brand-light); border-radius: var(--radius-sm);
+  padding: 6px;
+}
+.blocker-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: var(--radius-sm);
+  font-size: .9rem; font-weight: 500; color: var(--text); cursor: pointer;
+}
+.blocker-option:hover { background: var(--surface-2); }
+.blocker-option input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--brand); flex: none; }
 
 .form-actions {
   display: flex;

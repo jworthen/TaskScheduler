@@ -53,6 +53,7 @@ export function priorityBadge(priority) {
 
 export function statusBadge(status) {
   if (status === "active") return `<span class="badge badge-status badge-active">Active</span>`;
+  if (status === "onhold") return `<span class="badge badge-status badge-onhold">On Hold</span>`;
   return "";
 }
 
