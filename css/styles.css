@@ -479,6 +479,11 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   background: var(--purple-light); color: #7C5BC0; border-color: var(--purple);
   text-transform: uppercase; letter-spacing: .04em; font-size: .66rem;
 }
+/* On-hold status — muted, recedes into the background */
+.badge-onhold {
+  background: var(--surface-2); color: var(--text-muted); border-color: var(--border);
+  text-transform: uppercase; letter-spacing: .04em; font-size: .66rem;
+}
 
 .category-chip {
   display: inline-flex; align-items: center;
@@ -819,6 +824,8 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .row-blocked td:first-child { border-left: 3px solid var(--red); }
 .row-active td { background: var(--purple-light); }
 .row-active td:first-child { border-left: 3px solid var(--purple); }
+.row-onhold td { opacity: .6; }
+.row-onhold td:first-child { border-left: 3px solid var(--text-muted); }
 .task-name-cell { font-weight: 600; max-width: 240px; }
 .task-actions { white-space: nowrap; }
 .overdue { color: var(--red) !important; font-weight: 700; }

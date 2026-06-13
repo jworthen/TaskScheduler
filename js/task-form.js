@@ -51,10 +51,11 @@ export function openTaskForm(task) {
       </div>
 
       <div class="form-row">
-        <label>Status <span class="hint">(Active stays pinned to the top of your lists)</span></label>
+        <label>Status <span class="hint">(Active pins to the top; On Hold sinks to the bottom)</span></label>
         <select id="sf-status">
-          <option value="todo"   ${task.status === "active" ? "" : "selected"}>To Do</option>
+          <option value="todo"   ${task.status === "active" || task.status === "onhold" ? "" : "selected"}>To Do</option>
           <option value="active" ${task.status === "active" ? "selected" : ""}>Active (in progress)</option>
+          <option value="onhold" ${task.status === "onhold" ? "selected" : ""}>On Hold (paused)</option>
         </select>
       </div>
 
