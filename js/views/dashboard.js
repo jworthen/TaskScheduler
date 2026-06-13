@@ -4,7 +4,7 @@
 
 import { getState, getBlockedTasks } from "../store.js";
 import { fromTs } from "../db.js";
-import { formatDate, priorityBadge } from "../ui-utils.js";
+import { formatDate, priorityBadge, statusBadge } from "../ui-utils.js";
 import { openTaskForm } from "../task-form.js";
 
 // Brand-palette project colors — assigned round-robin by project index
@@ -39,9 +39,20 @@ export function renderDashboard() {
   const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
   const todayStr = now.toDateString();
 
+  // In-progress tasks are surfaced in their own pinned section, so keep them
+  // out of "Up next" to avoid showing the same card twice in the Today zone.
+  const inProgress = tasks
+    .filter(t => !t.completed && t.status === "active")
+    .sort((a, b) => {
+      const sa = fromTs(a.scheduledStart) ?? new Date(9999, 0);
+      const sb = fromTs(b.scheduledStart) ?? new Date(9999, 0);
+      return sa - sb;
+    });
+  const inProgressIds = new Set(inProgress.map(t => t.id));
+
   const todayTasks = tasks
     .filter(t => {
-      if (t.completed) return false;
+      if (t.completed || inProgressIds.has(t.id)) return false;
       const s = fromTs(t.scheduledStart);
       return s && s.toDateString() === todayStr;
     })
@@ -122,6 +133,14 @@ export function renderDashboard() {
     <!-- ── TODAY ZONE ────────────────────────────────────────── -->
     <div class="dash-zone">
       <div class="dash-zone-label">Today</div>
+
+      ${inProgress.length ? `
+      <section class="dash-section">
+        <h3 class="section-title">In progress
+          <span class="section-badge">${inProgress.length} active</span>
+        </h3>
+        <div class="task-list">${inProgress.map(t => taskRow(t, projects, true)).join("")}</div>
+      </section>` : ""}
 
       <section class="dash-section">
         <h3 class="section-title">Up next
@@ -206,6 +225,7 @@ function taskRow(task, projects, showTime = false, isCompleted = false, showSche
       <div class="task-row-body">
         <div class="task-row-main">
           <span class="task-name">${esc(task.name)}${stage ? ` <span class="task-list-name">${esc(stage.name)}</span>` : ""}</span>
+          ${isCompleted ? "" : statusBadge(task.status)}
           ${isCompleted ? "" : priorityBadge(task.priority)}
         </div>
         <div class="task-row-meta">

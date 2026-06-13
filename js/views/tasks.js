@@ -10,7 +10,7 @@
 import { getState, setState, getBlockedTasks } from "../store.js";
 import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { priorityBadge, formatDate } from "../ui-utils.js";
+import { priorityBadge, statusBadge, formatDate } from "../ui-utils.js";
 
 export function renderTasks() {
   const el = document.getElementById("view-tasks");
@@ -37,7 +37,8 @@ export function renderTasks() {
         <option value="low">Low</option>
       </select>
       <select id="filter-status">
-        <option value="active">Active</option>
+        <option value="active">Open</option>
+        <option value="inprogress">In progress</option>
         <option value="completed">Completed</option>
         <option value="blocked">Blocked</option>
         <option value="all">All</option>
@@ -70,9 +71,10 @@ function applyFilters(el) {
   let filtered = tasks.filter(t => {
     if (projectId  && t.projectId  !== projectId)  return false;
     if (priority   && t.priority   !== priority)    return false;
-    if (status === "active"    && t.completed)       return false;
-    if (status === "completed" && !t.completed)      return false;
-    if (status === "blocked"   && !blocked.includes(t.id)) return false;
+    if (status === "active"     && t.completed)       return false;
+    if (status === "inprogress" && (t.completed || t.status !== "active")) return false;
+    if (status === "completed"  && !t.completed)      return false;
+    if (status === "blocked"    && !blocked.includes(t.id)) return false;
     if (search && !t.name.toLowerCase().includes(search)) return false;
     return true;
   });
@@ -82,6 +84,11 @@ function applyFilters(el) {
   const po = { high: 0, medium: 1, low: 2 };
 
   filtered.sort((a, b) => {
+    // In-progress tasks pinned to the very top (completed ones never count as active)
+    const aActive = !a.completed && a.status === "active";
+    const bActive = !b.completed && b.status === "active";
+    if (aActive !== bActive) return aActive ? -1 : 1;
+
     const aOver = isOverdue(a), bOver = isOverdue(b);
     // Overdue first
     if (aOver !== bOver) return aOver ? -1 : 1;
@@ -146,12 +153,14 @@ function taskRow(task, blockedIds) {
   const due       = fromTs(task.dueDate);
   const sched     = fromTs(task.scheduledStart);
   const isBlocked = blockedIds.includes(task.id);
+  const isActive  = !task.completed && task.status === "active";
   const now       = new Date();
 
   return `
-    <tr data-task-id="${task.id}" class="${task.completed ? "row-completed" : ""} ${isBlocked ? "row-blocked" : ""}">
+    <tr data-task-id="${task.id}" class="${task.completed ? "row-completed" : ""} ${isBlocked ? "row-blocked" : ""} ${isActive ? "row-active" : ""}">
       <td class="task-name-cell">
         ${esc(task.name)}
+        ${isActive ? ` ${statusBadge(task.status)}` : ""}
         ${isBlocked ? ` <span class="blocked-badge">🚫</span>` : ""}
         ${task.trelloUrl ? ` <a href="${task.trelloUrl}" target="_blank" rel="noopener" class="trello-card-link" onclick="event.stopPropagation()" title="Open in Trello">↗</a>` : ""}
       </td>

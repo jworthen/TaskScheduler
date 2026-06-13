@@ -474,6 +474,12 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .badge-medium { background: var(--yellow-light); color: #C99A2E;       border-color: var(--yellow); }
 .badge-low    { background: var(--green-light);  color: #2E8266;       border-color: var(--green); }
 
+/* In-progress status — lilac accent, distinct from priority colours */
+.badge-active {
+  background: var(--purple-light); color: #7C5BC0; border-color: var(--purple);
+  text-transform: uppercase; letter-spacing: .04em; font-size: .66rem;
+}
+
 .category-chip {
   display: inline-flex; align-items: center;
   padding: 2px 9px; border-radius: 20px; font-size: .72rem; font-weight: 700;
@@ -811,6 +817,8 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .task-table tr[data-task-id]:hover { background: var(--surface-2); }
 .row-completed td { opacity: .5; }
 .row-blocked td:first-child { border-left: 3px solid var(--red); }
+.row-active td { background: var(--purple-light); }
+.row-active td:first-child { border-left: 3px solid var(--purple); }
 .task-name-cell { font-weight: 600; max-width: 240px; }
 .task-actions { white-space: nowrap; }
 .overdue { color: var(--red) !important; font-weight: 700; }

@@ -257,6 +257,7 @@ export function getTrelloCache() {
           schedUnschedulable:       meta.schedUnschedulable       ?? t.schedUnschedulable       ?? false,
           schedUnschedulableReason: meta.schedUnschedulableReason ?? t.schedUnschedulableReason ?? null,
           manuallyScheduled:        meta.manuallyScheduled        ?? t.manuallyScheduled        ?? false,
+          status:                   meta.status                   ?? t.status                   ?? "todo",
           estimatedHours:           meta.estimatedHours           ?? t.estimatedHours           ?? 1,
           priority:                 meta.priority                 ?? t.priority,
           blockerIds:               meta.blockerIds               ?? t.blockerIds               ?? [],
@@ -402,6 +403,7 @@ export function cardToTask(card, boardId, shortLinkMap = {}) {
     startDate:         card.start             ? new Date(card.start) : null,
     completed:         card.dueComplete                                          ?? false,
     completedAt:       card.dueComplete && card.dateLastActivity ? new Date(card.dateLastActivity) : null,
+    status:            meta.status ?? "todo",   // "todo" | "active" (in progress) — local-only
     scheduledStart:     meta.scheduledStart    ? new Date(meta.scheduledStart) : null,
     scheduledEnd:       meta.scheduledEnd      ? new Date(meta.scheduledEnd)   : null,
     scheduledBlocks:    meta.scheduledBlocks

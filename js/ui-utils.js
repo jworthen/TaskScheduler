@@ -48,6 +48,14 @@ export function priorityBadge(priority) {
   return `<span class="badge badge-priority badge-${priority}">${map[priority] ?? priority}</span>`;
 }
 
+// ─── Status badge ────────────────────────────────────────────────────────────
+// Only "active" (in progress) gets a badge; "todo" is the unmarked default.
+
+export function statusBadge(status) {
+  if (status === "active") return `<span class="badge badge-status badge-active">Active</span>`;
+  return "";
+}
+
 // ─── Date helpers ────────────────────────────────────────────────────────────
 
 export function formatDate(date) {
