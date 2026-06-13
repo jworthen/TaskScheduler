@@ -194,10 +194,11 @@ export async function getLists(boardId) {
 
 // ─── Cards (Tasks) ────────────────────────────────────────────────────────────
 
-/** Fetch open cards that have a due date and are not yet complete,
+/** Fetch open cards (with or without a due date) that are not yet complete,
  *  plus any cards marked dueComplete today (for "completed today" tracking).
- *  openListIds filters out cards whose list has been archived (Trello's
- *  card-level "open" filter does not exclude cards in archived lists). */
+ *  Cards without a due date surface in the Unscheduled view so they can be
+ *  triaged. openListIds filters out cards whose list has been archived
+ *  (Trello's card-level "open" filter does not exclude cards in archived lists). */
 export async function getCards(boardId, openListIds) {
   const cards = await get(`/boards/${boardId}/cards`, {
     filter: "open",
@@ -212,7 +213,7 @@ export async function getCards(boardId, openListIds) {
       // Include only if marked complete today
       return c.dateLastActivity && new Date(c.dateLastActivity).toDateString() === todayStr;
     }
-    return !!c.due;
+    return true; // include open cards even without a due date
   });
 
   // Build shortLink → cardId map so "Blocked By" field values can be resolved.
