@@ -8,7 +8,7 @@
 import { getState } from "../store.js";
 import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { formatTime, formatDate, priorityBadge, addDays } from "../ui-utils.js";
+import { formatTime, formatDate, priorityBadge, statusBadge, addDays } from "../ui-utils.js";
 
 // Project colors — must match dashboard.js
 const PROJECT_COLORS = [
@@ -140,6 +140,13 @@ function pickTop3(tasks, todayStr, now) {
     return out;
   };
 
+  // In-progress tasks come first — if you're actively working on something,
+  // it should be front and centre in your focus list.
+  const active = bucket(
+    tasks.filter(t => !t.completed && t.status === "active")
+         .sort(byPriorityThenDue)
+  );
+
   const overdue = bucket(
     tasks.filter(t => !t.completed && fromTs(t.dueDate) && fromTs(t.dueDate) < now)
          .sort(byPriorityThenDue)
@@ -165,7 +172,7 @@ function pickTop3(tasks, todayStr, now) {
     tasks.filter(t => !t.completed).sort(byPriorityThenDue)
   );
 
-  const pool = [...overdue, ...scheduledToday, ...dueSoon, ...rest];
+  const pool = [...active, ...overdue, ...scheduledToday, ...dueSoon, ...rest];
   const top3 = pool.slice(0, 3);
   while (top3.length < 3) top3.push(null);
   return top3;
@@ -200,6 +207,7 @@ function focusCard(task, num, projects) {
           <div class="focus-card-name">${esc(task.name)}</div>
           ${project ? `<div class="focus-card-project">${esc(project.name)}${stage ? ` · ${esc(stage.name)}` : ""}</div>` : ""}
           <div class="focus-card-meta">
+            ${statusBadge(task.status)}
             ${priorityBadge(task.priority)}
             <span class="task-hours">${task.estimatedHours}h</span>
             ${due ? `<span class="task-due ${isOverdue ? "overdue" : ""}">Due ${formatDate(due)}</span>` : ""}
@@ -225,6 +233,7 @@ function alsoRow(task, projects) {
       <div class="task-row-body">
         <div class="task-row-main">
           <span class="task-name">${esc(task.name)}</span>
+          ${statusBadge(task.status)}
           ${priorityBadge(task.priority)}
         </div>
         <div class="task-row-meta">

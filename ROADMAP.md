@@ -67,6 +67,7 @@ and settings are stored in localStorage. No backend server.
 
 ## 💡 Phase 5 — Nice-to-haves
 
+- [x] Task status: mark a card "Active" (in progress) to pin it to the top of the to-do lists
 - [ ] Project color strips in the weekly calendar (matches dashboard/focus colors)
 - [ ] Dark mode toggle
 - [ ] Project timeline view: Gantt-style, one row per Trello board

@@ -50,6 +50,14 @@ export function openTaskForm(task) {
         </div>
       </div>
 
+      <div class="form-row">
+        <label>Status <span class="hint">(Active stays pinned to the top of your lists)</span></label>
+        <select id="sf-status">
+          <option value="todo"   ${task.status === "active" ? "" : "selected"}>To Do</option>
+          <option value="active" ${task.status === "active" ? "selected" : ""}>Active (in progress)</option>
+        </select>
+      </div>
+
       <div class="form-actions">
         <button type="button" class="btn-ghost" id="sf-cancel">Cancel</button>
         <button type="submit" class="btn-primary">Save scheduling info</button>
@@ -66,9 +74,11 @@ export function openTaskForm(task) {
 
     const hours    = parseFloat(document.getElementById("sf-hours").value) || 1;
     const priority = document.getElementById("sf-priority")?.value || null;
+    const status   = document.getElementById("sf-status")?.value || "todo";
 
     const patch = {
       estimatedHours: hours,
+      status,
     };
     if (priority) patch.priority = priority;
 
