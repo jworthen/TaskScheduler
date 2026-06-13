@@ -22,6 +22,7 @@ import { renderDashboard } from "./views/dashboard.js";
 import { renderWeekly, navigateWeek } from "./views/weekly.js";
 import { renderDaily }                 from "./views/daily.js";
 import { renderTasks }     from "./views/tasks.js";
+import { renderUnscheduled } from "./views/unscheduled.js";
 import { renderSettings }  from "./views/settings.js";
 
 // ─── View registry ────────────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ const VIEWS = {
   weekly:    renderWeekly,
   daily:     renderDaily,
 tasks:     renderTasks,
+  unscheduled: renderUnscheduled,
   settings:  renderSettings,
 };
 
