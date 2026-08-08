@@ -13,7 +13,7 @@ import { getState, setState } from "../store.js";
 import { saveSettings } from "../db.js";
 import { connectCalendar, isCalendarConnected } from "../calendar.js";
 import { runScheduler } from "../scheduler.js";
-import { toast } from "../ui-utils.js";
+import { toast, dateKey } from "../ui-utils.js";
 import {
   isConnected, getApiKey, startOAuth, clearCredentials, loadCredentials,
   clearAllBlockerIds,
@@ -113,6 +113,28 @@ export function renderSettings() {
         }).join("")}
       </div>
       <button class="btn-primary" id="save-working-hours">Save working hours</button>
+    </section>
+
+    <!-- Spot hours -->
+    <section class="settings-section">
+      <h3>Spot Hours</h3>
+      <p class="settings-hint">
+        Add a one-off block of time on a specific date — for example, "I want to
+        work 2 hours this Saturday." Spot hours are added on top of your regular
+        working hours for that day, so you can open up time on a day that's
+        normally off. The scheduler re-runs automatically whenever you add or
+        remove a block.
+      </p>
+      <div class="spot-hours-form">
+        <input type="date" id="spot-date" value="${esc(dateKey(new Date()))}" />
+        <input type="time" id="spot-start" value="09:00" />
+        <span>–</span>
+        <input type="time" id="spot-end" value="11:00" />
+        <button class="btn-secondary" id="add-spot-hours">Add spot hours</button>
+      </div>
+      <div id="spot-hours-list" class="spot-hours-list">
+        ${renderSpotHoursList(settings?.spotHours ?? {})}
+      </div>
     </section>
 
     <!-- Scheduler -->
@@ -238,6 +260,42 @@ export function renderSettings() {
     toast("Working hours saved! 🕐", "success");
   });
 
+  // ── Spot hours ────────────────────────────────────────────────────────────────
+  el.querySelector("#add-spot-hours").addEventListener("click", async () => {
+    const date  = el.querySelector("#spot-date").value;
+    const start = el.querySelector("#spot-start").value;
+    const end   = el.querySelector("#spot-end").value;
+
+    if (!date)          { toast("Pick a date for your spot hours.", "error"); return; }
+    if (!start || !end) { toast("Set both a start and end time.", "error"); return; }
+    if (end <= start)   { toast("End time must be after the start time.", "error"); return; }
+
+    const spotHours = structuredClone(getState().settings?.spotHours ?? {});
+    const existing  = spotHours[date] ?? [];
+    if (existing.some(s => s.start === start && s.end === end)) {
+      toast("You already added that block.", "info");
+      return;
+    }
+    spotHours[date] = [...existing, { start, end }].sort((a, b) => a.start.localeCompare(b.start));
+
+    persistSpotHours(spotHours);
+    await rescheduleAfterSpotChange(el, "Spot hours added");
+  });
+
+  el.querySelector("#spot-hours-list").addEventListener("click", async (e) => {
+    const btn = e.target.closest(".spot-remove");
+    if (!btn) return;
+    const { date, index } = btn.dataset;
+
+    const spotHours = structuredClone(getState().settings?.spotHours ?? {});
+    if (!spotHours[date]) return;
+    spotHours[date].splice(Number(index), 1);
+    if (!spotHours[date].length) delete spotHours[date];
+
+    persistSpotHours(spotHours);
+    await rescheduleAfterSpotChange(el, "Spot hours removed");
+  });
+
   // ── Auto-scheduler ────────────────────────────────────────────────────────────
   el.querySelector("#run-scheduler").addEventListener("click", async () => {
     const btn = el.querySelector("#run-scheduler");
@@ -289,6 +347,68 @@ export function renderSettings() {
       toast("Calendar error: " + err.message, "error");
     }
   });
+}
+
+// ─── Spot hours helpers ─────────────────────────────────────────────────────
+
+/** Persist spotHours to localStorage and the in-memory store together. */
+function persistSpotHours(spotHours) {
+  setState({ settings: { ...getState().settings, spotHours } });
+  saveSettings({ spotHours });
+}
+
+/**
+ * Re-run the scheduler after spot hours change so tasks flow into (or out of)
+ * the new window, then refresh the settings panel and any visible view.
+ */
+async function rescheduleAfterSpotChange(el, verb) {
+  const list = el.querySelector("#spot-hours-list");
+  if (list) list.innerHTML = renderSpotHoursList(getState().settings?.spotHours ?? {});
+  try {
+    const { scheduled } = await runScheduler();
+    rerenderCurrent();
+    toast(`${verb} — scheduled ${scheduled.length} task${scheduled.length !== 1 ? "s" : ""}.`, "success");
+  } catch (err) {
+    toast(`${verb}, but scheduling failed: ${err.message}`, "error");
+  }
+}
+
+/** Render the list of saved spot-hour blocks, grouped and sorted by date. */
+function renderSpotHoursList(spotHours) {
+  const dates = Object.keys(spotHours).filter(d => spotHours[d]?.length).sort();
+  if (!dates.length) {
+    return `<p class="settings-hint" style="margin:0;">No spot hours yet.</p>`;
+  }
+  return dates.map(date => `
+    <div class="spot-day">
+      <div class="spot-day-label">${esc(formatDateKey(date))}</div>
+      <div class="spot-day-blocks">
+        ${spotHours[date].map((s, i) => `
+          <span class="spot-chip">
+            ${esc(formatSpotTime(s.start))} – ${esc(formatSpotTime(s.end))}
+            <button class="spot-remove" data-date="${esc(date)}" data-index="${i}"
+                    title="Remove" aria-label="Remove spot hours">×</button>
+          </span>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
+}
+
+/** "2026-08-08" → "Sat, Aug 8, 2026" (parsed in local time, not UTC). */
+function formatDateKey(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short", month: "short", day: "numeric", year: "numeric",
+  }).format(date);
+}
+
+/** "09:00" → "9:00 AM" */
+function formatSpotTime(timeStr) {
+  const [h, m] = timeStr.split(":").map(Number);
+  const date = new Date(2000, 0, 1, h, m);
+  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
 }
 
 function esc(str) {
