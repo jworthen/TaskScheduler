@@ -17,6 +17,7 @@
 import { fromTs } from "./db.js";
 import { saveSchedMeta } from "./trello.js";
 import { getState, setState } from "./store.js";
+import { dateKey } from "./ui-utils.js";
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
@@ -26,15 +27,16 @@ const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
  * @param {Date}   to
  * @param {object} workingHours — { 0: null | {start,end}, 1: ..., ... }
  * @param {Array}  busyBlocks   — [{ start: Date, end: Date }, ...]
+ * @param {object} spotHours    — { "YYYY-MM-DD": [{start,end}, ...] } one-off windows
  * @returns {Array<{start:Date, end:Date, freeMinutes:number, dayBusy:Array}>}
  */
-export function buildAvailableSlots(from, to, workingHours, busyBlocks = []) {
+export function buildAvailableSlots(from, to, workingHours, busyBlocks = [], spotHours = {}) {
   const slots  = [];
   const cursor = startOfDay(from);
   const end    = startOfDay(to);
 
   while (cursor <= end) {
-    const dayIntervals = getDayIntervals(cursor, workingHours);
+    const dayIntervals = getDayIntervals(cursor, workingHours, spotHours);
 
     for (const iv of dayIntervals) {
       // Never schedule before `from` (e.g. don't place in the past)
@@ -103,6 +105,7 @@ function topoSort(tasks) {
 export async function runScheduler() {
   const { settings, calendarEvents, tasks: allTasks } = getState();
   const workingHours = settings?.workingHours ?? defaultWorkingHours();
+  const spotHours    = settings?.spotHours ?? {};
   const busyBlocks   = calendarEvents.map(e => ({
     start: new Date(e.start),
     end:   new Date(e.end),
@@ -152,7 +155,7 @@ export async function runScheduler() {
     const rangeStart = earliest < rangeEnd ? earliest : rangeEnd;
 
     const busyNow = [...busyBlocks, ...occupied];
-    const slots   = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow);
+    const slots   = buildAvailableSlots(rangeStart, rangeEnd, workingHours, busyNow, spotHours);
 
     // ── Pass 1: single contiguous block before due date ───────────────────────
     let placedBlocks = null;
@@ -169,7 +172,7 @@ export async function runScheduler() {
     let isLate = false;
     if (!placedBlocks) {
       const extStart  = new Date(Math.max(due.getTime(), earliest.getTime()));
-      const lateSlots = buildAvailableSlots(extStart, horizon, workingHours, busyNow);
+      const lateSlots = buildAvailableSlots(extStart, horizon, workingHours, busyNow, spotHours);
       const lateSingle = placeEarliest(lateSlots, neededMins);
       if (lateSingle) {
         placedBlocks = [lateSingle];
@@ -308,11 +311,46 @@ function placeEarliest(slots, neededMins) {
   return null;
 }
 
-function getDayIntervals(date, workingHours) {
+/**
+ * Working intervals available on a specific date: the recurring weekly working
+ * hours for that day-of-week, PLUS any one-off "spot hours" the user added for
+ * that exact date. Overlapping/adjacent intervals are merged so free time is
+ * never double-counted. This is what lets a normally-off day (e.g. a Saturday)
+ * still receive scheduled work when spot hours are set for it.
+ */
+function getDayIntervals(date, workingHours, spotHours = {}) {
+  const intervals = [];
+
   const dow = date.getDay();
-  const wh = workingHours[dow];
-  if (!wh) return [];
-  return [{ start: parseTime(date, wh.start), end: parseTime(date, wh.end) }];
+  const wh  = workingHours[dow];
+  if (wh) intervals.push({ start: parseTime(date, wh.start), end: parseTime(date, wh.end) });
+
+  const spots = spotHours[dateKey(date)] ?? [];
+  for (const s of spots) {
+    if (!s?.start || !s?.end) continue;
+    const start = parseTime(date, s.start);
+    const end   = parseTime(date, s.end);
+    if (end > start) intervals.push({ start, end });
+  }
+
+  return mergeIntervals(intervals);
+}
+
+/** Sort by start and merge overlapping/adjacent [{start,end}] Date intervals. */
+function mergeIntervals(intervals) {
+  if (intervals.length <= 1) return intervals;
+  const sorted = [...intervals].sort((a, b) => a.start - b.start);
+  const merged = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = merged[merged.length - 1];
+    const cur  = sorted[i];
+    if (cur.start <= prev.end) {
+      if (cur.end > prev.end) prev.end = cur.end;
+    } else {
+      merged.push(cur);
+    }
+  }
+  return merged;
 }
 
 function buildFreeIntervals(dayStart, dayEnd, busyBlocks) {

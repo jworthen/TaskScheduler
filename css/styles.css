@@ -858,6 +858,50 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 .wh-row input[type="time"]:focus { border-color: var(--brand); }
 .wh-row input:disabled { opacity: .4; }
 
+/* ── Spot hours ───────────────────────────── */
+.spot-hours-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.spot-hours-form input[type="date"],
+.spot-hours-form input[type="time"] {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: .85rem;
+  color: var(--text);
+  background: #fff;
+}
+.spot-hours-form input:focus { border-color: var(--brand); }
+.spot-hours-list { display: flex; flex-direction: column; gap: 10px; }
+.spot-day { display: flex; flex-direction: column; gap: 5px; }
+.spot-day-label { font-weight: 600; font-size: .85rem; color: var(--text); }
+.spot-day-blocks { display: flex; flex-wrap: wrap; gap: 6px; }
+.spot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  background: rgba(31, 168, 180, .10);
+  border: 1px solid rgba(31, 168, 180, .30);
+  border-radius: 999px;
+  font-size: .82rem;
+  color: var(--text);
+}
+.spot-remove {
+  border: none;
+  background: rgba(0,0,0,.06);
+  color: var(--text);
+  width: 18px; height: 18px;
+  line-height: 1;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: .95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.spot-remove:hover { background: var(--brand); color: #fff; }
+
 .cat-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .cat-row { display: flex; flex-direction: column; gap: 0; }
 .cat-color { width: 34px; height: 34px; border: none; border-radius: var(--radius-sm); cursor: pointer; padding: 0; }
@@ -1110,6 +1154,20 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
   position: absolute;
   left: 0; right: 0;
   background: rgba(0,0,0,.04);
+  pointer-events: none;
+  z-index: 0;
+}
+/* One-off "spot hours" window — a faint tint so it reads as bonus availability */
+.hour-block-spot {
+  position: absolute;
+  left: 0; right: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(31, 168, 180, .10),
+    rgba(31, 168, 180, .10) 8px,
+    rgba(31, 168, 180, .04) 8px,
+    rgba(31, 168, 180, .04) 16px
+  );
   pointer-events: none;
   z-index: 0;
 }

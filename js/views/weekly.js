@@ -6,7 +6,7 @@ import { getState, setState } from "../store.js";
 import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
 import { saveSchedMeta } from "../trello.js";
-import { toast, startOfWeek, addDays, isSameDay, formatTime } from "../ui-utils.js";
+import { toast, startOfWeek, addDays, isSameDay, formatTime, dateKey } from "../ui-utils.js";
 
 const HOUR_START = 7;   // 7 AM
 const HOUR_END   = 22;  // 10 PM
@@ -19,6 +19,7 @@ export function renderWeekly() {
   const { tasks, settings } = getState();
   const categories   = settings?.categories  ?? [];
   const workingHours = settings?.workingHours ?? null;
+  const spotHours    = settings?.spotHours ?? {};
 
   const today    = new Date();
   today.setHours(0,0,0,0);
@@ -61,7 +62,7 @@ export function renderWeekly() {
                 <span class="dow-date">${day.getDate()}</span>
               </div>
               <div class="week-col-body" data-date="${day.toISOString()}">
-                ${buildDaySlots(day, workingHours)}
+                ${buildDaySlots(day, workingHours, spotHours)}
                 ${layoutDayTasks(dayTasks, day).map(item => buildTaskBlock(item, categories)).join("")}
               </div>
             </div>
@@ -113,30 +114,39 @@ function buildTimeGutter() {
   return html;
 }
 
-function buildDaySlots(day, workingHours) {
+function buildDaySlots(day, workingHours, spotHours = {}) {
   const totalHours = HOUR_END - HOUR_START;
   let html = "";
 
   // ── Non-working hour overlay ───────────────────────────────────────────────
+  // Grey out everything outside the day's available intervals. Available time is
+  // the recurring working hours for this day-of-week plus any one-off spot hours
+  // set for this exact date, so a normally-off day with spot hours shows an open
+  // window instead of being fully greyed.
   if (workingHours !== null) {
-    const dow = day.getDay();
-    const wh  = workingHours[dow];
-    if (!wh) {
-      html += `<div class="hour-block-nonworking" style="top:0;height:${totalHours * SLOT_H}px"></div>`;
-    } else {
-      const [sH, sM] = wh.start.split(":").map(Number);
-      const [eH, eM] = wh.end.split(":").map(Number);
-      const workStart = sH + sM / 60;
-      const workEnd   = eH + eM / 60;
-      if (workStart > HOUR_START) {
-        const h = (workStart - HOUR_START) * SLOT_H;
-        html += `<div class="hour-block-nonworking" style="top:0;height:${h}px"></div>`;
-      }
-      if (workEnd < HOUR_END) {
-        const top = (workEnd - HOUR_START) * SLOT_H;
-        const h   = (HOUR_END - workEnd) * SLOT_H;
-        html += `<div class="hour-block-nonworking" style="top:${top}px;height:${h}px"></div>`;
-      }
+    const working = dayWorkingIntervals(day, workingHours);
+    const spots   = daySpotIntervals(day, spotHours);
+    const open    = mergeHourIntervals([...working, ...spots]);
+
+    // Grey blocks fill the gaps between the visible window and the open intervals.
+    let cursor = HOUR_START;
+    for (const iv of open) {
+      const from = Math.max(iv.start, HOUR_START);
+      const to   = Math.min(iv.end, HOUR_END);
+      if (to <= from) continue;
+      if (from > cursor) html += nonWorkingBlock(cursor, from);
+      cursor = Math.max(cursor, to);
+    }
+    if (cursor < HOUR_END) html += nonWorkingBlock(cursor, HOUR_END);
+
+    // Faint highlight so one-off spot windows are visually distinct.
+    for (const iv of spots) {
+      const from = Math.max(iv.start, HOUR_START);
+      const to   = Math.min(iv.end, HOUR_END);
+      if (to <= from) continue;
+      const top = (from - HOUR_START) * SLOT_H;
+      const h   = (to - from) * SLOT_H;
+      html += `<div class="hour-block-spot" style="top:${top}px;height:${h}px" title="Spot hours"></div>`;
     }
   }
 
@@ -146,6 +156,48 @@ function buildDaySlots(day, workingHours) {
   }
 
   return html;
+}
+
+// Grey overlay block spanning [fromHour, toHour) in fractional hours.
+function nonWorkingBlock(fromHour, toHour) {
+  const top = (fromHour - HOUR_START) * SLOT_H;
+  const h   = (toHour - fromHour) * SLOT_H;
+  return `<div class="hour-block-nonworking" style="top:${top}px;height:${h}px"></div>`;
+}
+
+// Recurring working hours for a day, as fractional-hour intervals.
+function dayWorkingIntervals(day, workingHours) {
+  const wh = workingHours[day.getDay()];
+  if (!wh) return [];
+  return [{ start: hoursOf(wh.start), end: hoursOf(wh.end) }];
+}
+
+// One-off spot hours for a specific date, as fractional-hour intervals.
+function daySpotIntervals(day, spotHours) {
+  const spots = spotHours[dateKey(day)] ?? [];
+  return spots
+    .filter(s => s?.start && s?.end)
+    .map(s => ({ start: hoursOf(s.start), end: hoursOf(s.end) }))
+    .filter(iv => iv.end > iv.start);
+}
+
+function hoursOf(timeStr) {
+  const [h, m] = timeStr.split(":").map(Number);
+  return h + m / 60;
+}
+
+// Sort and merge overlapping/adjacent fractional-hour intervals.
+function mergeHourIntervals(intervals) {
+  if (intervals.length <= 1) return intervals;
+  const sorted = [...intervals].sort((a, b) => a.start - b.start);
+  const merged = [ { ...sorted[0] } ];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = merged[merged.length - 1];
+    const cur  = sorted[i];
+    if (cur.start <= prev.end) prev.end = Math.max(prev.end, cur.end);
+    else merged.push({ ...cur });
+  }
+  return merged;
 }
 
 // Compute a task's clamped time interval (in fractional hours) for the given day.

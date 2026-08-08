@@ -13,6 +13,7 @@ Task data lives in Trello. Scheduling metadata (estimated hours, priority, sched
 - Pulls boards, lists, and cards from Trello
 - Automatically schedules tasks into your working hours using a latest-possible-slot algorithm
 - Respects due dates, task dependencies (blockers), priority, and preferred time slots
+- Supports one-off "spot hours" — add extra availability on a specific date (e.g. work 2 hours this Saturday)
 - Shows a weekly calendar grid and a daily focus view
 - Reads Google Calendar (read-only) to avoid scheduling over busy blocks
 - Persists your schedule across page refreshes via localStorage

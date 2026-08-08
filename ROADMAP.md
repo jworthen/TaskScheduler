@@ -69,6 +69,7 @@ and settings are stored in localStorage. No backend server.
 
 - [x] Task status: mark a card "Active" (in progress) or "On Hold" to reorder the to-do lists
 - [x] In-app blocker picker: set which same-list cards must finish first, from the scheduling modal
+- [x] Spot hours: add one-off availability on a specific date (e.g. "work 2 hours this Saturday"), scheduled on top of regular working hours
 - [ ] Project color strips in the weekly calendar (matches dashboard/focus colors)
 - [ ] Dark mode toggle
 - [ ] Project timeline view: Gantt-style, one row per Trello board
