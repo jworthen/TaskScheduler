@@ -19,6 +19,9 @@ const PROJECT_COLORS = [
   "#20B2AA", // sea green
 ];
 
+// Sort weight for task priority; unset priority sorts as medium
+const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+
 function projectColor(projectId, projects) {
   const idx = projects.findIndex(p => p.id === projectId);
   return PROJECT_COLORS[(idx < 0 ? 0 : idx) % PROJECT_COLORS.length];
@@ -80,6 +83,11 @@ export function renderDashboard() {
     if (t.completed) return false;
     const due = fromTs(t.dueDate);
     return due && due < now;
+  }).sort((a, b) => {
+    // Priority first (high → medium → low), then most overdue first
+    const pd = (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1);
+    if (pd !== 0) return pd;
+    return fromTs(a.dueDate) - fromTs(b.dueDate);
   });
 
   const blocked = getBlockedTasks();
