@@ -4,7 +4,7 @@
 
 import { getState, getBlockedTasks } from "../store.js";
 import { fromTs } from "../db.js";
-import { formatDate, priorityBadge, statusBadge } from "../ui-utils.js";
+import { formatDate, priorityBadge, statusBadge, startOfDay, isPastDue } from "../ui-utils.js";
 import { openTaskForm } from "../task-form.js";
 
 // Brand-palette project colors — assigned round-robin by project index
@@ -21,6 +21,12 @@ const PROJECT_COLORS = [
 
 // Sort weight for task priority; unset priority sorts as medium
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+
+// A long overdue list swamps the radar column, so show this many and collapse
+// the rest behind a toggle. The flag lives at module scope so the choice
+// survives the re-renders triggered by editing or completing a task.
+const OVERDUE_COLLAPSE_AT = 10;
+let overdueExpanded = false;
 
 function projectColor(projectId, projects) {
   const idx = projects.findIndex(p => p.id === projectId);
@@ -71,24 +77,30 @@ export function renderDashboard() {
   const hoursToday      = todayTasks.reduce((sum, t) => sum + (t.estimatedHours ?? 0), 0);
   const hoursCompleted  = completedToday.reduce((sum, t) => sum + (t.estimatedHours ?? 0), 0);
 
+  // Due dates are compared day-to-day, ignoring any time of day on them, so a
+  // task due today counts as due — not overdue — right up to midnight.
   const dueSoon = tasks
     .filter(t => {
       if (t.completed) return false;
       const due = fromTs(t.dueDate);
-      return due && due <= weekEnd && due >= now;
+      return due && !isPastDue(due, now) && startOfDay(due) <= weekEnd;
     })
     .sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
 
   const overdue = tasks.filter(t => {
     if (t.completed) return false;
-    const due = fromTs(t.dueDate);
-    return due && due < now;
+    return isPastDue(fromTs(t.dueDate), now);
   }).sort((a, b) => {
     // Priority first (high → medium → low), then most overdue first
     const pd = (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1);
     if (pd !== 0) return pd;
     return fromTs(a.dueDate) - fromTs(b.dueDate);
   });
+
+  const overdueCollapsible = overdue.length > OVERDUE_COLLAPSE_AT;
+  const overdueShown = overdueCollapsible && !overdueExpanded
+    ? overdue.slice(0, OVERDUE_COLLAPSE_AT)
+    : overdue;
 
   const blocked = getBlockedTasks();
 
@@ -177,8 +189,14 @@ export function renderDashboard() {
 
       ${overdue.length ? `
       <section class="dash-section">
-        <h3 class="section-title danger-title">Overdue</h3>
-        <div class="task-list">${overdue.map(t => taskRow(t, projects)).join("")}</div>
+        <h3 class="section-title danger-title">Overdue
+          ${overdueCollapsible ? `<span class="section-badge">${overdue.length} total</span>` : ""}
+        </h3>
+        <div class="task-list">${overdueShown.map(t => taskRow(t, projects)).join("")}</div>
+        ${overdueCollapsible ? `
+        <button type="button" class="task-list-toggle" id="overdue-toggle">
+          ${overdueExpanded ? "Show less" : `Show ${overdue.length - OVERDUE_COLLAPSE_AT} more`}
+        </button>` : ""}
       </section>` : ""}
 
       ${dueSoon.length ? `
@@ -206,6 +224,11 @@ export function renderDashboard() {
       const task = getState().tasks.find(t => t.id === row.dataset.taskId);
       if (task) openTaskForm(task);
     });
+  });
+
+  el.querySelector("#overdue-toggle")?.addEventListener("click", () => {
+    overdueExpanded = !overdueExpanded;
+    renderDashboard();
   });
 }
 
@@ -239,7 +262,7 @@ function taskRow(task, projects, showTime = false, isCompleted = false, showSche
         <div class="task-row-meta">
           ${completedTime}
           ${schedMeta}
-          ${due ? `<span class="task-due ${!isCompleted && due < new Date() ? "overdue" : ""}">Due ${formatDate(due)}</span>` : ""}
+          ${due ? `<span class="task-due ${!isCompleted && isPastDue(due) ? "overdue" : ""}">Due ${formatDate(due)}</span>` : ""}
           <span class="task-hours">${task.estimatedHours}h</span>
           ${task.blockerIds?.length ? `<span class="blocked-badge">Blocked</span>` : ""}
           ${task.recurring ? `<span class="recurring-badge">Recurring</span>` : ""}
