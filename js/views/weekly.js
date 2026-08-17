@@ -6,7 +6,7 @@ import { getState, setState } from "../store.js";
 import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
 import { saveSchedMeta } from "../trello.js";
-import { toast, startOfWeek, addDays, isSameDay, formatTime, dateKey } from "../ui-utils.js";
+import { toast, startOfWeek, startOfDay, addDays, isSameDay, formatTime, dateKey } from "../ui-utils.js";
 
 const HOUR_START = 7;   // 7 AM
 const HOUR_END   = 22;  // 10 PM
@@ -21,8 +21,7 @@ export function renderWeekly() {
   const workingHours = settings?.workingHours ?? null;
   const spotHours    = settings?.spotHours ?? {};
 
-  const today    = new Date();
-  today.setHours(0,0,0,0);
+  const today     = startOfDay(new Date());
   const weekStart = addDays(startOfWeek(today), weekOffset * 7);
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));

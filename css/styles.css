@@ -422,6 +422,28 @@ button { cursor: pointer; font-family: var(--font); border: none; outline: none;
 /* ─── Task rows ──────────────────────────────────────────── */
 .task-list { display: flex; flex-direction: column; gap: 6px; }
 
+/* "Show N more" / "Show less" under a truncated task list */
+.task-list-toggle {
+  margin-top: 8px;
+  padding: 6px 12px;
+  width: 100%;
+  background: none;
+  border: 1.5px dashed var(--brand-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.task-list-toggle:hover {
+  background: var(--surface-2);
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
 .task-row {
   display: flex;
   align-items: stretch;

@@ -10,7 +10,7 @@
 import { getState, setState, getBlockedTasks } from "../store.js";
 import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { priorityBadge, statusBadge, formatDate } from "../ui-utils.js";
+import { priorityBadge, statusBadge, formatDate, isPastDue } from "../ui-utils.js";
 
 export function renderTasks() {
   const el = document.getElementById("view-tasks");
@@ -82,7 +82,7 @@ function applyFilters(el) {
   });
 
   const now2 = new Date();
-  const isOverdue = t => !t.completed && fromTs(t.dueDate) && fromTs(t.dueDate) < now2;
+  const isOverdue = t => !t.completed && isPastDue(fromTs(t.dueDate), now2);
   const po = { high: 0, medium: 1, low: 2 };
 
   filtered.sort((a, b) => {
@@ -174,7 +174,7 @@ function taskRow(task, blockedIds) {
       </td>
       <td>${project ? esc(project.name) : "—"}${stage ? ` <span class="task-list-name">(${esc(stage.name)})</span>` : ""}</td>
       <td>${priorityBadge(task.priority)}</td>
-      <td class="${due && due < now && !task.completed ? "overdue" : ""}">${due ? formatDate(due) : "—"}</td>
+      <td class="${!task.completed && isPastDue(due, now) ? "overdue" : ""}">${due ? formatDate(due) : "—"}</td>
       <td>${task.estimatedHours}h</td>
       <td>${sched ? formatDate(sched) : "—"}</td>
       <td class="task-actions" onclick="event.stopPropagation()">

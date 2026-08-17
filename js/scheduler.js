@@ -3,7 +3,8 @@
  *
  * Strategy: "Latest possible" placement with soft due-date fallback
  * For each schedulable task (sorted by priority then due date):
- *   1. Respect start date strictly — never schedule before task.startDate.
+ *   1. Respect start date strictly — never schedule before task.startDate, read
+ *      as a whole day (the task opens up at the start of that day).
  *   2. Try to place the task as late as possible before its due date.
  *   3. If there is not enough capacity before the due date, find the earliest
  *      available slot AFTER the due date (up to the 60-day horizon) and
@@ -17,7 +18,7 @@
 import { fromTs } from "./db.js";
 import { saveSchedMeta } from "./trello.js";
 import { getState, setState } from "./store.js";
-import { dateKey } from "./ui-utils.js";
+import { dateKey, startOfDay, endOfDay } from "./ui-utils.js";
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
@@ -84,13 +85,16 @@ function topoSort(tasks) {
     result.push(task);
   }
 
-  // Seed in priority + due-date order so tiebreaking is stable and meaningful
+  // Seed in priority + due-date order so tiebreaking is stable and meaningful.
+  // Due dates compare by day only, matching how the rest of the app reads them:
+  // two tasks due the same day tie here regardless of any time stored on them,
+  // and a stable sort then leaves them in their existing relative order.
   const seeded = [...tasks].sort((a, b) => {
     const pa = PRIORITY_ORDER[a.priority] ?? 1;
     const pb = PRIORITY_ORDER[b.priority] ?? 1;
     if (pa !== pb) return pa - pb;
-    const da = fromTs(a.dueDate) ?? new Date(9999, 0);
-    const db = fromTs(b.dueDate) ?? new Date(9999, 0);
+    const da = startOfDay(fromTs(a.dueDate) ?? new Date(9999, 0));
+    const db = startOfDay(fromTs(b.dueDate) ?? new Date(9999, 0));
     return da - db;
   });
   for (const task of seeded) visit(task);
@@ -140,10 +144,12 @@ export async function runScheduler() {
     const neededMins = (task.estimatedHours ?? 1) * 60;
 
     // Earliest start = max(now, task.startDate, scheduled end of every unfinished blocker).
+    // Start dates are whole days like due dates, so the task opens up at the start of its
+    // start day — the `now` clamp still keeps it from being placed in the past.
     // Because tasks are processed in topological order, any blocker in our task list will
     // already have an entry in updatedMeta by the time we reach this task.
     let earliestMs = task.startDate
-      ? Math.max(task.startDate.getTime(), now.getTime())
+      ? Math.max(startOfDay(task.startDate).getTime(), now.getTime())
       : now.getTime();
     for (const blockerId of task.blockerIds ?? []) {
       const blockerEnd = updatedMeta[blockerId]?.scheduledEnd;
@@ -374,18 +380,6 @@ function parseTime(date, timeStr) {
   const [h, m] = timeStr.split(":").map(Number);
   const d = new Date(date);
   d.setHours(h, m, 0, 0);
-  return d;
-}
-
-function startOfDay(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfDay(date) {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
   return d;
 }
 

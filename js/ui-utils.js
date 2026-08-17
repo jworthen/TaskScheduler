@@ -69,6 +69,30 @@ export function formatTime(date) {
   return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(date);
 }
 
+/** Midnight (local time) on the day the given date falls in. */
+export function startOfDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** The last instant (local time) of the day the given date falls in. */
+export function endOfDay(date) {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+/**
+ * Due dates are whole days — the time component is ignored everywhere we ask
+ * "is this late?". A task due today is not past due until tomorrow starts,
+ * no matter what clock time is stored on the due date.
+ */
+export function isPastDue(due, now = new Date()) {
+  if (!due) return false;
+  return startOfDay(due) < startOfDay(now);
+}
+
 export function isSameDay(a, b) {
   return a.getFullYear() === b.getFullYear() &&
          a.getMonth()    === b.getMonth()    &&
@@ -86,8 +110,7 @@ export function dateKey(date) {
 export function startOfWeek(date) {
   const d = new Date(date);
   d.setDate(d.getDate() - d.getDay());
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return startOfDay(d);
 }
 
 export function addDays(date, n) {

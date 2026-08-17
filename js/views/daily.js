@@ -8,7 +8,7 @@
 import { getState } from "../store.js";
 import { fromTs } from "../db.js";
 import { openTaskForm } from "../task-form.js";
-import { formatTime, formatDate, priorityBadge, statusBadge, addDays } from "../ui-utils.js";
+import { formatTime, formatDate, priorityBadge, statusBadge, addDays, startOfDay, isPastDue } from "../ui-utils.js";
 
 // Project colors — must match dashboard.js
 const PROJECT_COLORS = [
@@ -148,7 +148,7 @@ function pickTop3(tasks, todayStr, now) {
   );
 
   const overdue = bucket(
-    tasks.filter(t => !t.completed && fromTs(t.dueDate) && fromTs(t.dueDate) < now)
+    tasks.filter(t => !t.completed && isPastDue(fromTs(t.dueDate), now))
          .sort(byPriorityThenDue)
   );
 
@@ -164,7 +164,7 @@ function pickTop3(tasks, todayStr, now) {
     tasks.filter(t => {
       if (t.completed) return false;
       const due = fromTs(t.dueDate);
-      return due && due >= now && due <= weekEnd;
+      return due && !isPastDue(due, now) && startOfDay(due) <= weekEnd;
     }).sort(byPriorityThenDue)
   );
 
@@ -195,7 +195,7 @@ function focusCard(task, num, projects) {
   const color   = projectColor(task.projectId, projects);
   const due     = fromTs(task.dueDate);
   const now     = new Date();
-  const isOverdue = due && due < now;
+  const isOverdue = isPastDue(due, now);
   const sched   = fromTs(task.scheduledStart);
 
   return `
@@ -238,7 +238,7 @@ function alsoRow(task, projects) {
         </div>
         <div class="task-row-meta">
           ${sched ? `<span class="task-time">${formatTime(sched)}</span>` : ""}
-          ${due ? `<span class="task-due ${due < now ? "overdue" : ""}">Due ${formatDate(due)}</span>` : ""}
+          ${due ? `<span class="task-due ${isPastDue(due, now) ? "overdue" : ""}">Due ${formatDate(due)}</span>` : ""}
           <span class="task-hours">${task.estimatedHours}h</span>
           ${project ? `<span class="task-list-name">${esc(project.name)}</span>` : ""}
         </div>
