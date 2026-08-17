@@ -109,9 +109,7 @@ export function renderDashboard() {
     const due   = fromTs(t.dueDate);
     const sched = fromTs(t.scheduledStart);
     if (!due || !sched) return false;
-    const dueDay   = new Date(due);   dueDay.setHours(0, 0, 0, 0);
-    const schedDay = new Date(sched); schedDay.setHours(0, 0, 0, 0);
-    return schedDay > dueDay;
+    return startOfDay(sched) > startOfDay(due);
   }).sort((a, b) => fromTs(a.dueDate) - fromTs(b.dueDate));
 
   const unschedulable = tasks.filter(t => !t.completed && t.schedUnschedulable)

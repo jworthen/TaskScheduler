@@ -17,7 +17,7 @@
 import { fromTs } from "./db.js";
 import { saveSchedMeta } from "./trello.js";
 import { getState, setState } from "./store.js";
-import { dateKey } from "./ui-utils.js";
+import { dateKey, startOfDay, endOfDay } from "./ui-utils.js";
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
@@ -84,13 +84,16 @@ function topoSort(tasks) {
     result.push(task);
   }
 
-  // Seed in priority + due-date order so tiebreaking is stable and meaningful
+  // Seed in priority + due-date order so tiebreaking is stable and meaningful.
+  // Due dates compare by day only, matching how the rest of the app reads them:
+  // two tasks due the same day tie here regardless of any time stored on them,
+  // and a stable sort then leaves them in their existing relative order.
   const seeded = [...tasks].sort((a, b) => {
     const pa = PRIORITY_ORDER[a.priority] ?? 1;
     const pb = PRIORITY_ORDER[b.priority] ?? 1;
     if (pa !== pb) return pa - pb;
-    const da = fromTs(a.dueDate) ?? new Date(9999, 0);
-    const db = fromTs(b.dueDate) ?? new Date(9999, 0);
+    const da = startOfDay(fromTs(a.dueDate) ?? new Date(9999, 0));
+    const db = startOfDay(fromTs(b.dueDate) ?? new Date(9999, 0));
     return da - db;
   });
   for (const task of seeded) visit(task);
@@ -374,18 +377,6 @@ function parseTime(date, timeStr) {
   const [h, m] = timeStr.split(":").map(Number);
   const d = new Date(date);
   d.setHours(h, m, 0, 0);
-  return d;
-}
-
-function startOfDay(date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfDay(date) {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
   return d;
 }
 

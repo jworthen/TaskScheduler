@@ -76,6 +76,13 @@ export function startOfDay(date) {
   return d;
 }
 
+/** The last instant (local time) of the day the given date falls in. */
+export function endOfDay(date) {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
 /**
  * Due dates are whole days — the time component is ignored everywhere we ask
  * "is this late?". A task due today is not past due until tomorrow starts,
@@ -103,8 +110,7 @@ export function dateKey(date) {
 export function startOfWeek(date) {
   const d = new Date(date);
   d.setDate(d.getDate() - d.getDay());
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return startOfDay(d);
 }
 
 export function addDays(date, n) {
