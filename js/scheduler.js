@@ -3,7 +3,8 @@
  *
  * Strategy: "Latest possible" placement with soft due-date fallback
  * For each schedulable task (sorted by priority then due date):
- *   1. Respect start date strictly — never schedule before task.startDate.
+ *   1. Respect start date strictly — never schedule before task.startDate, read
+ *      as a whole day (the task opens up at the start of that day).
  *   2. Try to place the task as late as possible before its due date.
  *   3. If there is not enough capacity before the due date, find the earliest
  *      available slot AFTER the due date (up to the 60-day horizon) and
@@ -143,10 +144,12 @@ export async function runScheduler() {
     const neededMins = (task.estimatedHours ?? 1) * 60;
 
     // Earliest start = max(now, task.startDate, scheduled end of every unfinished blocker).
+    // Start dates are whole days like due dates, so the task opens up at the start of its
+    // start day — the `now` clamp still keeps it from being placed in the past.
     // Because tasks are processed in topological order, any blocker in our task list will
     // already have an entry in updatedMeta by the time we reach this task.
     let earliestMs = task.startDate
-      ? Math.max(task.startDate.getTime(), now.getTime())
+      ? Math.max(startOfDay(task.startDate).getTime(), now.getTime())
       : now.getTime();
     for (const blockerId of task.blockerIds ?? []) {
       const blockerEnd = updatedMeta[blockerId]?.scheduledEnd;
