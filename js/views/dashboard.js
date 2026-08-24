@@ -22,11 +22,42 @@ const PROJECT_COLORS = [
 // Sort weight for task priority; unset priority sorts as medium
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
-// A long overdue list swamps the radar column, so show this many and collapse
-// the rest behind a toggle. The flag lives at module scope so the choice
-// survives the re-renders triggered by editing or completing a task.
-const OVERDUE_COLLAPSE_AT = 10;
-let overdueExpanded = false;
+// A long radar list swamps the column, so show this many rows and collapse the
+// rest behind a toggle. The flags live at module scope so the choice survives
+// the re-renders triggered by editing or completing a task.
+const COLLAPSE_AT = 10;
+const expandedSections = { overdue: false, dueSoon: false };
+
+/**
+ * Work out what a long task list should render: the visible rows plus the
+ * state the "Show N more" toggle needs. `key` indexes into expandedSections.
+ */
+function collapsible(list, key) {
+  const canCollapse = list.length > COLLAPSE_AT;
+  const expanded    = expandedSections[key];
+  return {
+    key,
+    total:       list.length,
+    canCollapse,
+    expanded,
+    shown:       canCollapse && !expanded ? list.slice(0, COLLAPSE_AT) : list,
+    hiddenCount: Math.max(0, list.length - COLLAPSE_AT),
+  };
+}
+
+/** Heading badge showing the full count while a list is truncated. */
+function collapseBadge(c) {
+  return c.canCollapse ? `<span class="section-badge">${c.total} total</span>` : "";
+}
+
+/** "Show N more" / "Show less" button for a collapsible list. */
+function collapseToggle(c) {
+  if (!c.canCollapse) return "";
+  return `
+    <button type="button" class="task-list-toggle" data-collapse-key="${c.key}">
+      ${c.expanded ? "Show less" : `Show ${c.hiddenCount} more`}
+    </button>`;
+}
 
 function projectColor(projectId, projects) {
   const idx = projects.findIndex(p => p.id === projectId);
@@ -97,10 +128,8 @@ export function renderDashboard() {
     return fromTs(a.dueDate) - fromTs(b.dueDate);
   });
 
-  const overdueCollapsible = overdue.length > OVERDUE_COLLAPSE_AT;
-  const overdueShown = overdueCollapsible && !overdueExpanded
-    ? overdue.slice(0, OVERDUE_COLLAPSE_AT)
-    : overdue;
+  const overdueList = collapsible(overdue, "overdue");
+  const dueSoonList = collapsible(dueSoon, "dueSoon");
 
   const blocked = getBlockedTasks();
 
@@ -187,20 +216,16 @@ export function renderDashboard() {
 
       ${overdue.length ? `
       <section class="dash-section">
-        <h3 class="section-title danger-title">Overdue
-          ${overdueCollapsible ? `<span class="section-badge">${overdue.length} total</span>` : ""}
-        </h3>
-        <div class="task-list">${overdueShown.map(t => taskRow(t, projects)).join("")}</div>
-        ${overdueCollapsible ? `
-        <button type="button" class="task-list-toggle" id="overdue-toggle">
-          ${overdueExpanded ? "Show less" : `Show ${overdue.length - OVERDUE_COLLAPSE_AT} more`}
-        </button>` : ""}
+        <h3 class="section-title danger-title">Overdue ${collapseBadge(overdueList)}</h3>
+        <div class="task-list">${overdueList.shown.map(t => taskRow(t, projects)).join("")}</div>
+        ${collapseToggle(overdueList)}
       </section>` : ""}
 
       ${dueSoon.length ? `
       <section class="dash-section">
-        <h3 class="section-title">Due this week</h3>
-        <div class="task-list">${dueSoon.map(t => taskRow(t, projects)).join("")}</div>
+        <h3 class="section-title">Due this week ${collapseBadge(dueSoonList)}</h3>
+        <div class="task-list">${dueSoonList.shown.map(t => taskRow(t, projects)).join("")}</div>
+        ${collapseToggle(dueSoonList)}
       </section>` : ""}
 
       ${blocked.length ? `
@@ -224,9 +249,12 @@ export function renderDashboard() {
     });
   });
 
-  el.querySelector("#overdue-toggle")?.addEventListener("click", () => {
-    overdueExpanded = !overdueExpanded;
-    renderDashboard();
+  el.querySelectorAll(".task-list-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.collapseKey;
+      expandedSections[key] = !expandedSections[key];
+      renderDashboard();
+    });
   });
 }
 
